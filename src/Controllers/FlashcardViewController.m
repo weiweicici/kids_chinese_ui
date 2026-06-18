@@ -19,6 +19,13 @@
 @property (strong, nonatomic) AVAudioPlayer *recordedPlayer;
 @property (assign, nonatomic) BOOL isRecording;
 
+// Game mode
+@property (strong, nonatomic) UIView *footerView;
+@property (strong, nonatomic) NSArray<WordModel *> *lessonWords;
+@property (strong, nonatomic) NSArray<NSNumber *> *shuffledIndices;
+@property (strong, nonatomic) NSTimer *advanceTimer;
+@property (assign, nonatomic) NSInteger currentPlayIndex;
+
 @end
 
 @implementation FlashcardViewController
@@ -29,7 +36,12 @@
     
     [self setupStaticUI];
     [self reloadWordData];
-    [self requestMicrophonePermission];
+    
+    if (self.isGameMode) {
+        [self setupGameModeUI];
+    } else {
+        [self requestMicrophonePermission];
+    }
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
@@ -37,6 +49,11 @@
     
     [self.gifPlayer stop];
     [[AudioManager sharedManager] stopCurrentSound];
+    
+    if (self.isGameMode) {
+        [self.advanceTimer invalidate];
+        self.advanceTimer = nil;
+    }
     
     [self.recorder stop];
     self.recorder.delegate = nil;
@@ -162,12 +179,13 @@
     [self.canvasView addSubview:self.micButton];
     
     // 4. Footer toolbar (frame: 0, 904, 768, 120)
-    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 904.0f, 768.0f, 120.0f)];
-    footerView.backgroundColor = [self surfaceContainerColor];
-    footerView.layer.shadowColor = [self primaryColor].CGColor;
-    footerView.layer.shadowOpacity = 0.08f;
-    footerView.layer.shadowRadius = 8.0f;
-    footerView.layer.shadowOffset = CGSizeMake(0, -4.0f);
+    self.footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 904.0f, 768.0f, 120.0f)];
+    self.footerView.backgroundColor = [self surfaceContainerColor];
+    self.footerView.layer.shadowColor = [self primaryColor].CGColor;
+    self.footerView.layer.shadowOpacity = 0.08f;
+    self.footerView.layer.shadowRadius = 8.0f;
+    self.footerView.layer.shadowOffset = CGSizeMake(0, -4.0f);
+    UIView *footerView = self.footerView;
     
     // Cross Button (left)
     SquishyButton *crossBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(146.0f, 28.0f, 64.0f, 64.0f)
@@ -254,6 +272,240 @@
     self.charLabel.hidden = NO;
 }
 
+#pragma mark - Game Mode (认读游戏)
+
+- (void)setupGameModeUI {
+    // Remove old footer subviews
+    for (UIView *v in self.footerView.subviews) {
+        [v removeFromSuperview];
+    }
+
+    // Load lesson words
+    LessonModel *lesson = [[TextbookManager sharedManager] lessonForBook:self.currentBook lesson:self.currentLesson];
+    self.lessonWords = lesson.words;
+
+    // Setup shuffled indices
+    [self rebuildShuffledIndices];
+
+    // Start from word 1
+    self.currentPlayIndex = 1;
+    self.selectedWordIndex = 1;
+
+    // --- Footer game mode buttons ---
+    // 🔈 Manual play (left)
+    SquishyButton *playBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(40.0f, 12.0f, 200.0f, 48.0f)
+                                                  backgroundColor:[self colorFromHex:@"#70cfc2"]
+                                                      shadowColor:[self primaryColor]
+                                                     cornerRadius:24.0f];
+    [playBtn setTitle:@"🔈 手动播放" forState:UIControlStateNormal];
+    [playBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    playBtn.titleLabel.font = [UIFont systemFontOfSize:18.0f];
+    [playBtn addTarget:self action:@selector(gameManualPlay) forControlEvents:UIControlEventTouchUpInside];
+    [self.footerView addSubview:playBtn];
+
+    // 🖌️ Replay stroke (right)
+    SquishyButton *strokeBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(260.0f, 12.0f, 200.0f, 48.0f)
+                                                    backgroundColor:[self primaryContainerColor]
+                                                        shadowColor:[self primaryColor]
+                                                       cornerRadius:24.0f];
+    [strokeBtn setTitle:@"🖌️ 再播放笔画" forState:UIControlStateNormal];
+    [strokeBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+    strokeBtn.titleLabel.font = [UIFont systemFontOfSize:18.0f];
+    [strokeBtn addTarget:self action:@selector(gameReplayStroke) forControlEvents:UIControlEventTouchUpInside];
+    [self.footerView addSubview:strokeBtn];
+
+    // Difficulty selector (bottom row)
+    // "易" label
+    UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, 72.0f, 30.0f, 36.0f)];
+    easyLabel.text = @"易";
+    easyLabel.font = [UIFont systemFontOfSize:20.0f];
+    easyLabel.textColor = [self isShuffled] ? [self onSurfaceVariantColor] : [self primaryColor];
+    easyLabel.textAlignment = NSTextAlignmentCenter;
+    easyLabel.tag = 201;
+    [self.footerView addSubview:easyLabel];
+
+    // 5 stars
+    for (NSInteger i = 1; i <= 5; i++) {
+        UIButton *star = [UIButton buttonWithType:UIButtonTypeCustom];
+        star.frame = CGRectMake(215.0f + (i - 1) * 32.0f, 72.0f, 30.0f, 36.0f);
+        star.tag = 300 + i;
+        star.titleLabel.font = [UIFont systemFontOfSize:22.0f];
+
+        if (i == 1 || i == 5) {
+            [star addTarget:self action:@selector(starTapped:) forControlEvents:UIControlEventTouchUpInside];
+        } else {
+            star.enabled = NO;
+        }
+
+        [self.footerView addSubview:star];
+    }
+
+    // "难" label
+    UILabel *hardLabel = [[UILabel alloc] initWithFrame:CGRectMake(395.0f, 72.0f, 30.0f, 36.0f)];
+    hardLabel.text = @"难";
+    hardLabel.font = [UIFont systemFontOfSize:20.0f];
+    hardLabel.textColor = [self isShuffled] ? [self primaryColor] : [self onSurfaceVariantColor];
+    hardLabel.textAlignment = NSTextAlignmentCenter;
+    hardLabel.tag = 202;
+    [self.footerView addSubview:hardLabel];
+
+    [self updateStarsDisplay];
+
+    // Start auto-play
+    [self startAutoPlay];
+}
+
+- (void)rebuildShuffledIndices {
+    NSMutableArray *indices = [NSMutableArray array];
+    for (NSInteger i = 1; i <= 16; i++) {
+        [indices addObject:@(i)];
+    }
+    if (self.isShuffled) {
+        for (NSInteger i = 15; i > 0; i--) {
+            NSInteger j = arc4random_uniform((uint32_t)(i + 1));
+            [indices exchangeObjectAtIndex:i withObjectAtIndex:j];
+        }
+    }
+    self.shuffledIndices = indices;
+}
+
+- (NSInteger)actualWordIndex {
+    return [self.shuffledIndices[self.currentPlayIndex - 1] integerValue];
+}
+
+- (void)startAutoPlay {
+    [self.advanceTimer invalidate];
+    self.advanceTimer = nil;
+
+    WordModel *word = [self gameWordAtPlayIndex:self.currentPlayIndex];
+    if (!word) return;
+
+    // Display word
+    self.wordModel = word;
+    self.pinyinLabel.text = word.pinyinWithTone;
+    self.charLabel.text = word.character;
+    self.charLabel.hidden = NO;
+    self.selectedWordIndex = [self actualWordIndex];
+
+    // Play audio immediately
+    [self playStandardAudio];
+
+    // Play stroke GIF after 1.5s
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(playStrokeAnimation) object:nil];
+    [self performSelector:@selector(playStrokeAnimation) withObject:nil afterDelay:1.5f];
+
+    // Advance to next word after 5s total
+    self.advanceTimer = [NSTimer scheduledTimerWithTimeInterval:5.0
+                                                         target:self
+                                                       selector:@selector(advanceToNextWord)
+                                                       userInfo:nil
+                                                        repeats:NO];
+}
+
+- (WordModel *)gameWordAtPlayIndex:(NSInteger)playIndex {
+    if (playIndex < 1 || playIndex > 16) return nil;
+    NSInteger wordIdx = [self actualWordIndex];
+    return [[TextbookManager sharedManager] wordForBook:self.currentBook lesson:self.currentLesson wordIndex:wordIdx];
+}
+
+- (void)advanceToNextWord {
+    if (self.currentPlayIndex < 16) {
+        self.currentPlayIndex++;
+        [self startAutoPlay];
+    } else {
+        [self gameComplete];
+    }
+}
+
+- (void)gameComplete {
+    // Save completion count to NSUserDefaults
+    NSString *modeKey = self.isShuffled ? @"hard" : @"easy";
+    NSString *key = [NSString stringWithFormat:@"game_completion_b%ld_l%ld_%@",
+                     (long)self.currentBook, (long)self.currentLesson, modeKey];
+    NSInteger count = [[NSUserDefaults standardUserDefaults] integerForKey:key];
+    count++;
+    [[NSUserDefaults standardUserDefaults] setInteger:count forKey:key];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"真棒！"
+                                                                   message:[NSString stringWithFormat:@"本课16个字已全部学完！\n已学习 %ld 次", (long)count]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"再学一次" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        self.currentPlayIndex = 1;
+        [self startAutoPlay];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"返回" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+        [self.navigationController popViewControllerAnimated:YES];
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)gameManualPlay {
+    [self.advanceTimer invalidate];
+    self.advanceTimer = nil;
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(playStrokeAnimation) object:nil];
+    [self stopStrokeAnimation];
+    [self startAutoPlay];
+}
+
+- (void)gameReplayStroke {
+    [self.gifPlayer stop];
+    self.gifPlayer.hidden = YES;
+    self.charLabel.hidden = NO;
+
+    WordModel *word = [self gameWordAtPlayIndex:self.currentPlayIndex];
+    if (!word) return;
+
+    [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(playStrokeAnimation) object:nil];
+    [self performSelector:@selector(playStrokeAnimation) withObject:nil afterDelay:0.3f];
+}
+
+- (void)starTapped:(UIButton *)sender {
+    NSInteger tag = sender.tag - 300; // 1 or 5
+
+    BOOL newShuffled = (tag == 5);
+    if (newShuffled == self.isShuffled) return; // no change
+
+    self.isShuffled = newShuffled;
+    [self rebuildShuffledIndices];
+
+    // Update labels
+    UILabel *easyLabel = [self.footerView viewWithTag:201];
+    UILabel *hardLabel = [self.footerView viewWithTag:202];
+    easyLabel.textColor = self.isShuffled ? [self onSurfaceVariantColor] : [self primaryColor];
+    hardLabel.textColor = self.isShuffled ? [self primaryColor] : [self onSurfaceVariantColor];
+
+    [self updateStarsDisplay];
+
+    // Restart game from word 1
+    [self.advanceTimer invalidate];
+    self.advanceTimer = nil;
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(playStrokeAnimation) object:nil];
+    [self stopStrokeAnimation];
+    self.currentPlayIndex = 1;
+    [self startAutoPlay];
+}
+
+- (void)updateStarsDisplay {
+    for (NSInteger i = 1; i <= 5; i++) {
+        UIButton *star = [self.footerView viewWithTag:300 + i];
+        if (self.isShuffled) {
+            [star setTitle:@"★" forState:UIControlStateNormal];
+            [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+        } else {
+            if (i == 1) {
+                [star setTitle:@"★" forState:UIControlStateNormal];
+                [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+            } else {
+                [star setTitle:@"☆" forState:UIControlStateNormal];
+                [star setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+            }
+        }
+    }
+}
+
 #pragma mark - Voice Recording (AVAudioRecorder)
 
 - (void)requestMicrophonePermission {
@@ -320,16 +572,33 @@
 #pragma mark - Actions
 
 - (void)startBtnClicked {
+    if (self.isGameMode) {
+        [self gameManualPlay];
+        return;
+    }
     [self playStandardAudio];
     [self playStrokeAnimation];
 }
 
 - (void)nextCardClicked {
+    if (self.isGameMode) {
+        [self.advanceTimer invalidate];
+        self.advanceTimer = nil;
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(playStrokeAnimation) object:nil];
+        [self stopStrokeAnimation];
+        if (self.currentPlayIndex < 16) {
+            self.currentPlayIndex++;
+            [self startAutoPlay];
+        } else {
+            [self gameComplete];
+        }
+        return;
+    }
+
     if (self.selectedWordIndex < 16) {
         self.selectedWordIndex++;
         [self reloadWordData];
     } else {
-        // Book chapter finished
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"真棒！"
                                                                        message:@"本课汉字已经全部学习完毕！"
                                                                 preferredStyle:UIAlertControllerStyleAlert];

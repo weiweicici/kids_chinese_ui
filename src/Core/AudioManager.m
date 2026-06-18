@@ -4,6 +4,7 @@
 @interface AudioManager () <AVAudioPlayerDelegate>
 @property (strong, nonatomic) AVAudioPlayer *player;
 @property (strong, nonatomic) NSMutableArray *retiredPlayers;
+@property (assign, nonatomic) BOOL isLoading;
 @end
 
 @implementation AudioManager
@@ -17,35 +18,57 @@
     return sharedInstance;
 }
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _retiredPlayers = [NSMutableArray array];
+        // Pre-activate audio session so first play is instant
+        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
+        [[AVAudioSession sharedInstance] setActive:YES error:nil];
+    }
+    return self;
+}
+
 - (void)playSoundNamed:(NSString *)soundName {
     [self stopCurrentSound];
-    
+
     NSString *path = [self pathForSoundFile:soundName];
     if (!path) {
         NSLog(@"Error: Sound file not found: %@", soundName);
         return;
     }
-    
-    NSURL *url = [NSURL fileURLWithPath:path];
-    NSError *error = nil;
-    
-    // Set session category for native playback on speakers
-    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
-    [[AVAudioSession sharedInstance] setActive:YES error:nil];
-    
-    self.player = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];
-    if (error || !self.player) {
-        NSLog(@"Error initializing AVAudioPlayer for file %@: %@", soundName, error);
-        self.player = nil;
-        return;
-    }
-    
-    self.player.delegate = self;
-    [self.player prepareToPlay];
-    [self.player play];
+
+    self.isLoading = YES;
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSData *data = [NSData dataWithContentsOfFile:path];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!self.isLoading) {
+                return;
+            }
+            self.isLoading = NO;
+            if (!data) {
+                NSLog(@"Error: Could not load audio data for %@", soundName);
+                return;
+            }
+
+            NSError *error = nil;
+            AVAudioPlayer *newPlayer = [[AVAudioPlayer alloc] initWithData:data error:&error];
+            if (error || !newPlayer) {
+                NSLog(@"Error initializing AVAudioPlayer for %@: %@", soundName, error);
+                return;
+            }
+
+            newPlayer.delegate = self;
+            [newPlayer prepareToPlay];
+            [newPlayer play];
+            self.player = newPlayer;
+        });
+    });
 }
 
 - (void)stopCurrentSound {
+    self.isLoading = NO;
     if (self.player) {
         AVAudioPlayer *oldPlayer = self.player;
         oldPlayer.delegate = nil;

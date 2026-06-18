@@ -2,6 +2,7 @@
 #import "TextbookManager.h"
 #import "AudioManager.h"
 #import "SquishyButton.h"
+#import "RiceCellView.h"
 #import "FlashcardViewController.h"
 #import "Game1ViewController.h"
 #import "Game2ViewController.h"
@@ -11,14 +12,13 @@
 @property (strong, nonatomic) LessonModel *lessonModel;
 @property (strong, nonatomic) UIView *gridContainer;
 @property (strong, nonatomic) UILabel *titleLabel;
-@property (strong, nonatomic) UIImageView *mascotImageView;
 
 // Lesson Picker UI Overlay
 @property (strong, nonatomic) UIView *pickerOverlay;
 @property (assign, nonatomic) NSInteger selectedBookForPicker;
 
-// Keep track of card view references for custom selection highlights
-@property (strong, nonatomic) NSMutableArray<UIButton *> *cardButtons;
+@property (strong, nonatomic) NSMutableArray<RiceCellView *> *cellViews;
+@property (assign, nonatomic) NSInteger selectedWordIndex;
 
 @end
 
@@ -30,7 +30,8 @@
     self.currentBook = 1;
     self.currentLesson = 1;
     self.selectedBookForPicker = 1;
-    self.cardButtons = [NSMutableArray array];
+    self.cellViews = [NSMutableArray array];
+    self.selectedWordIndex = -1;
     
     [self setupStaticUI];
     [self reloadLessonData];
@@ -117,21 +118,16 @@
     
     [self.canvasView addSubview:topNavBar];
     
-    // 2. Character Grid Container (centered in y: 80 to 924, height 844)
-    // We start grid at x=88, y=206 to center a 592x592 grid in 768x844 canvas.
-    self.gridContainer = [[UIView alloc] initWithFrame:CGRectMake(88.0f, 206.0f, 592.0f, 592.0f)];
+    // 2. Character Grid Container (tiled as large as possible)
+    // 768x1024 canvas: top bar 80, bottom nav 100 → available 844 height
+    CGFloat gridSize = 700.0f;
+    CGFloat gridX = (768.0f - gridSize) / 2;
+    CGFloat gridY = 80.0f + (844.0f - gridSize) / 2;
+    self.gridContainer = [[UIView alloc] initWithFrame:CGRectMake(gridX, gridY, gridSize, gridSize)];
     self.gridContainer.backgroundColor = [UIColor clearColor];
     [self.canvasView addSubview:self.gridContainer];
     
-    // 3. Mascot image view (bottom right corner: absolute bottom-10 right-10 w-64 h-80 z-20)
-    // Frame on canvas: x = 768 - 256 - 40 = 472, y = 1024 - 320 - 100 - 10 = 594.
-    self.mascotImageView = [[UIImageView alloc] initWithFrame:CGRectMake(490.0f, 600.0f, 250.0f, 310.0f)];
-    self.mascotImageView.contentMode = UIViewContentModeScaleAspectFit;
-    self.mascotImageView.userInteractionEnabled = NO;
-    [self.canvasView addSubview:self.mascotImageView];
-    [self loadMascotImage];
-    
-    // 4. BottomNavBar (frame: 0, 924, 768, 100)
+    // 3. BottomNavBar (frame: 0, 924, 768, 100)
     UIView *bottomNavBar = [[UIView alloc] initWithFrame:CGRectMake(0, 924.0f, 768.0f, 100.0f)];
     bottomNavBar.backgroundColor = [self surfaceContainerLowestColor];
     
@@ -176,13 +172,13 @@
     
     // Tab 4: 认读游戏
     SquishyButton *tab4 = [[SquishyButton alloc] initWithFrame:CGRectMake(478.0f, 18.0f, 130.0f, 64.0f)
-                                               backgroundColor:[self surfaceContainerColor]
-                                                   shadowColor:[self onSurfaceVariantColor]
+                                               backgroundColor:[self primaryContainerColor]
+                                                   shadowColor:[self primaryColor]
                                                   cornerRadius:16.0f];
     [tab4 setTitle:@"👁️ 认读游戏" forState:UIControlStateNormal];
-    [tab4 setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    [tab4 setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
     tab4.titleLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:16.0f];
-    [tab4 addTarget:self action:@selector(comingSoonAlert) forControlEvents:UIControlEventTouchUpInside];
+    [tab4 addTarget:self action:@selector(tab4Clicked) forControlEvents:UIControlEventTouchUpInside];
     [bottomNavBar addSubview:tab4];
     
     // Award button: Trophy circle
@@ -203,9 +199,7 @@
     [bottomNavBar addSubview:awardBtn];
     
     [self.canvasView addSubview:bottomNavBar];
-    
-    // Bring mascot to front just in case
-    [self.canvasView bringSubviewToFront:self.mascotImageView];
+
 }
 
 #pragma mark - Reload Data
@@ -222,13 +216,15 @@
                             [self chineseNumberForBook:self.currentBook], 
                             (long)self.currentLesson];
     
-    // Remove previous card buttons
-    for (UIButton *btn in self.cardButtons) {
-        [btn removeFromSuperview];
+    // Remove previous cell views
+    for (RiceCellView *cell in self.cellViews) {
+        [cell removeFromSuperview];
     }
-    [self.cardButtons removeAllObjects];
+    [self.cellViews removeAllObjects];
+    self.selectedWordIndex = -1;
     
-    // Render 4x4 card grid (16 characters)
+    // Render 4x4 rice grid (16 characters, evenly tiled)
+    CGFloat cellSize = self.gridContainer.frame.size.width / 4;
     NSArray<WordModel *> *words = self.lessonModel.words;
     for (NSInteger idx = 0; idx < 16; idx++) {
         if (idx >= words.count) break;
@@ -237,108 +233,41 @@
         NSInteger row = idx / 4;
         NSInteger col = idx % 4;
         
-        CGFloat cardX = col * (130.0f + 24.0f);
-        CGFloat cardY = row * (130.0f + 24.0f);
-        CGRect cardFrame = CGRectMake(cardX, cardY, 130.0f, 130.0f);
-        
-        UIButton *card = [self createCardViewForWord:word frame:cardFrame tag:(idx + 1)];
-        [self.gridContainer addSubview:card];
-        [self.cardButtons addObject:card];
+        CGRect cellFrame = CGRectMake(col * cellSize, row * cellSize, cellSize, cellSize);
+        RiceCellView *cell = [self createCellForWord:word frame:cellFrame index:idx];
+        [self.gridContainer addSubview:cell];
+        [self.cellViews addObject:cell];
     }
 }
 
-- (UIButton *)createCardViewForWord:(WordModel *)word frame:(CGRect)frame tag:(NSInteger)tag {
-    UIButton *card = [UIButton buttonWithType:UIButtonTypeCustom];
-    card.frame = frame;
-    card.tag = tag;
-    card.backgroundColor = [self surfaceContainerLowestColor];
-    card.layer.cornerRadius = 16.0f;
-    
-    // Subtle shadow matching Jade Sprout Design System
-    card.layer.shadowColor = [self primaryColor].CGColor;
-    card.layer.shadowOpacity = 0.08f;
-    card.layer.shadowRadius = 6.0f;
-    card.layer.shadowOffset = CGSizeMake(0, 3.0f);
-    
-    // Add pinyin label (top center)
-    UILabel *pinyinLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 10.0f, 130.0f, 20.0f)];
-    pinyinLabel.text = word.pinyinWithTone;
-    pinyinLabel.textAlignment = NSTextAlignmentCenter;
-    pinyinLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:14.0f];
-    pinyinLabel.textColor = [self onSurfaceVariantColor];
-    [card addSubview:pinyinLabel];
-    
-    // Add character label (center)
-    UILabel *charLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 30.0f, 130.0f, 80.0f)];
-    charLabel.text = word.character;
-    charLabel.textAlignment = NSTextAlignmentCenter;
-    charLabel.font = [self fontWithName:@"Noto Serif" size:64.0f];
-    charLabel.textColor = [self onSurfaceColor];
-    [card addSubview:charLabel];
-    
-    [card addTarget:self action:@selector(cardClicked:) forControlEvents:UIControlEventTouchUpInside];
-    
-    return card;
-}
+- (RiceCellView *)createCellForWord:(WordModel *)word frame:(CGRect)frame index:(NSInteger)index {
+    RiceCellView *cell = [[RiceCellView alloc] initWithFrame:frame];
+    [cell setCharacter:word.character];
 
-#pragma mark - Mascot Async Loader
+    __weak typeof(self) weakSelf = self;
+    cell.onTouchDown = ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
 
-- (void)loadMascotImage {
-    NSString *urlStr = @"https://lh3.googleusercontent.com/aida-public/AB6AXuBxmemK4q0jtIbnXwd_ZnSBGOzhrUHy3TKCoKv83E2PFxqBmCewrVA-tufXciTwRLhxiEA99E33rnSyl9SPjV7R4kFlJ0f1JObTBmPlFpNQD7yy2rs-U_ibmRaihTOQ-FRBSEJ8wh75wGKSylUej2PrUI7ltEBvoFBLiR3Fpqw2v5j6Ce-m_DB0BfHMZmTA_ozfFhSS696RDUaid2oE_rqMbmmZ4AhnomXTyA9j52Ou9z_axS7Vp7ry2cVwOWcCaRL2JLHaU6Az6F8";
-    
-    // Use caching in temporary directory to reduce network requests
-    NSString *cachePath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"mascot_sponge_cache.png"];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:cachePath]) {
-        self.mascotImageView.image = [UIImage imageWithContentsOfFile:cachePath];
-        return;
-    }
-    
-    // Load image asynchronously to maintain responsive UI
-    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:urlStr] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (data && !error) {
-            [data writeToFile:cachePath atomically:YES];
-            UIImage *img = [UIImage imageWithData:data];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                self.mascotImageView.image = img;
-            });
+        // Deselect previous cell
+        if (strongSelf.selectedWordIndex >= 0 && strongSelf.selectedWordIndex < strongSelf.cellViews.count) {
+            RiceCellView *prevCell = strongSelf.cellViews[strongSelf.selectedWordIndex];
+            prevCell.selected = NO;
         }
-    }];
-    [task resume];
+
+        strongSelf.selectedWordIndex = index;
+
+        // Play audio
+        [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
+    };
+
+    return cell;
 }
 
 #pragma mark - Actions
 
-- (void)cardClicked:(UIButton *)sender {
-    NSInteger index = sender.tag;
-    if (index < 1 || index > self.lessonModel.words.count) return;
-    
-    WordModel *word = self.lessonModel.words[index - 1];
-    
-    // 1. Play audio
-    [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
-    
-    // 2. Visually animate selection (highlight card)
-    [UIView animateWithDuration:0.15f animations:^{
-        // Reset all borders
-        for (UIButton *btn in self.cardButtons) {
-            btn.layer.borderWidth = 0.0f;
-            btn.transform = CGAffineTransformIdentity;
-        }
-        
-        // Highlight active one
-        sender.layer.borderWidth = 4.0f;
-        sender.layer.borderColor = [self primaryColor].CGColor;
-        sender.transform = CGAffineTransformMakeScale(1.05f, 1.05f);
-    }];
-    
-    // 3. Navigate to Flashcard View after sound starts playing
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        FlashcardViewController *flashcardVC = [[FlashcardViewController alloc] init];
-        flashcardVC.currentBook = self.currentBook;
-        flashcardVC.currentLesson = self.currentLesson;
-        flashcardVC.selectedWordIndex = index;
-        [self.navigationController pushViewController:flashcardVC animated:YES];
-    });
+- (void)cardClicked:(RiceCellView *)sender {
+    // Handled by onTouchDown block in createCellForWord:
 }
 
 - (void)followBtnClicked {
@@ -365,6 +294,16 @@
     gameVC.currentBook = self.currentBook;
     gameVC.currentLesson = self.currentLesson;
     [self.navigationController pushViewController:gameVC animated:YES];
+}
+
+- (void)tab4Clicked {
+    FlashcardViewController *flashcardVC = [[FlashcardViewController alloc] init];
+    flashcardVC.currentBook = self.currentBook;
+    flashcardVC.currentLesson = self.currentLesson;
+    flashcardVC.selectedWordIndex = 1;
+    flashcardVC.isGameMode = YES;
+    flashcardVC.isShuffled = NO;
+    [self.navigationController pushViewController:flashcardVC animated:YES];
 }
 
 - (void)comingSoonAlert {
