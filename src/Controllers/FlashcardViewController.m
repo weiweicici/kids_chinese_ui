@@ -315,51 +315,38 @@
     [strokeBtn addTarget:self action:@selector(gameReplayStroke) forControlEvents:UIControlEventTouchUpInside];
     [self.footerView addSubview:strokeBtn];
 
-    // Difficulty selector (bottom row)
-    // "易" label
-    UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, 72.0f, 30.0f, 36.0f)];
-    easyLabel.text = @"易";
-    easyLabel.font = [UIFont systemFontOfSize:20.0f];
-    easyLabel.textColor = [self isShuffled] ? [self onSurfaceVariantColor] : [self primaryColor];
-    easyLabel.textAlignment = NSTextAlignmentCenter;
-    easyLabel.userInteractionEnabled = NO;
-    easyLabel.tag = 201;
-    [self.footerView addSubview:easyLabel];
+    // Difficulty selector (bottom row) — visible UIButtons, centered
+    CGFloat centerY = 90.0f;
 
-    // 5 stars — purely visual UILabels (no gesture recognizers)
-    // BUG 1 FIX: UILabel+UITapGestureRecognizer fails on iOS 9 when UIPanGestureRecognizers
-    // exist on sibling views. Stars are visual-only; invisible UIButton overlays handle taps.
-    for (NSInteger i = 1; i <= 5; i++) {
-        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 32.0f, 72.0f, 30.0f, 36.0f)];
-        star.tag = 300 + i;
-        star.textAlignment = NSTextAlignmentCenter;
-        star.font = [UIFont systemFontOfSize:22.0f];
-        star.userInteractionEnabled = NO; // purely visual
-        [self.footerView addSubview:star];
-    }
-
-    // "难" label
-    UILabel *hardLabel = [[UILabel alloc] initWithFrame:CGRectMake(395.0f, 72.0f, 30.0f, 36.0f)];
-    hardLabel.text = @"难";
-    hardLabel.font = [UIFont systemFontOfSize:20.0f];
-    hardLabel.textColor = [self isShuffled] ? [self primaryColor] : [self onSurfaceVariantColor];
-    hardLabel.textAlignment = NSTextAlignmentCenter;
-    hardLabel.userInteractionEnabled = NO;
-    hardLabel.tag = 202;
-    [self.footerView addSubview:hardLabel];
-
-    // Invisible UIButton touch targets — reliable UIControlEventTouchUpInside on iOS 9
     UIButton *easyBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    easyBtn.frame = CGRectMake(175.0f, 68.0f, 80.0f, 44.0f);
-    easyBtn.backgroundColor = [UIColor clearColor];
-    easyBtn.tag = 401;
+    easyBtn.frame = CGRectMake(209.0f, centerY - 24.0f, 72.0f, 48.0f);
+    easyBtn.backgroundColor = [self isShuffled] ? [self surfaceContainerColor] : [self primaryColor];
+    easyBtn.layer.cornerRadius = 10.0f;
+    easyBtn.tag = 201;
+    easyBtn.titleLabel.font = [UIFont systemFontOfSize:20.0f];
+    [easyBtn setTitle:@"易" forState:UIControlStateNormal];
+    [easyBtn setTitleColor:[self isShuffled] ? [self onSurfaceVariantColor] : [UIColor whiteColor] forState:UIControlStateNormal];
     [easyBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.footerView addSubview:easyBtn];
 
+    // 5 stars — purely visual UILabels, centered between buttons
+    for (NSInteger i = 1; i <= 5; i++) {
+        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(297.0f + (i - 1) * 36.0f, centerY - 20.0f, 30.0f, 40.0f)];
+        star.tag = 300 + i;
+        star.textAlignment = NSTextAlignmentCenter;
+        star.font = [UIFont systemFontOfSize:26.0f];
+        star.userInteractionEnabled = NO;
+        [self.footerView addSubview:star];
+    }
+
     UIButton *hardBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    hardBtn.frame = CGRectMake(330.0f, 68.0f, 100.0f, 44.0f);
-    hardBtn.backgroundColor = [UIColor clearColor];
-    hardBtn.tag = 402;
+    hardBtn.frame = CGRectMake(487.0f, centerY - 24.0f, 72.0f, 48.0f);
+    hardBtn.backgroundColor = [self isShuffled] ? [self primaryColor] : [self surfaceContainerColor];
+    hardBtn.layer.cornerRadius = 10.0f;
+    hardBtn.tag = 202;
+    hardBtn.titleLabel.font = [UIFont systemFontOfSize:20.0f];
+    [hardBtn setTitle:@"难" forState:UIControlStateNormal];
+    [hardBtn setTitleColor:[self isShuffled] ? [UIColor whiteColor] : [self onSurfaceVariantColor] forState:UIControlStateNormal];
     [hardBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.footerView addSubview:hardBtn];
 
@@ -476,21 +463,20 @@
     [self performSelector:@selector(playStrokeAnimation) withObject:nil afterDelay:0.3f];
 }
 
-// BUG 1 FIX: UIButton target-action replaces UITapGestureRecognizer on UILabel.
 - (void)difficultyBtnTapped:(UIButton *)sender {
-    NSInteger tag = sender.tag; // 401 = easy, 402 = hard
-
-    BOOL newShuffled = (tag == 402);
-    if (newShuffled == self.isShuffled) return; // no change
+    BOOL newShuffled = (sender.tag == 202); // 202 = hard, 201 = easy
+    if (newShuffled == self.isShuffled) return;
 
     self.isShuffled = newShuffled;
     [self rebuildShuffledIndices];
 
-    // Update labels
-    UILabel *easyLabel = [self.footerView viewWithTag:201];
-    UILabel *hardLabel = [self.footerView viewWithTag:202];
-    easyLabel.textColor = self.isShuffled ? [self onSurfaceVariantColor] : [self primaryColor];
-    hardLabel.textColor = self.isShuffled ? [self primaryColor] : [self onSurfaceVariantColor];
+    // Update button styles
+    UIButton *easyBtn = (UIButton *)[self.footerView viewWithTag:201];
+    UIButton *hardBtn = (UIButton *)[self.footerView viewWithTag:202];
+    easyBtn.backgroundColor = self.isShuffled ? [self surfaceContainerColor] : [self primaryColor];
+    [easyBtn setTitleColor:self.isShuffled ? [self onSurfaceVariantColor] : [UIColor whiteColor] forState:UIControlStateNormal];
+    hardBtn.backgroundColor = self.isShuffled ? [self primaryColor] : [self surfaceContainerColor];
+    [hardBtn setTitleColor:self.isShuffled ? [UIColor whiteColor] : [self onSurfaceVariantColor] forState:UIControlStateNormal];
 
     [self updateStarsDisplay];
 

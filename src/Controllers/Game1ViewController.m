@@ -2,6 +2,9 @@
 #import "TextbookManager.h"
 #import "AudioManager.h"
 #import "SquishyButton.h"
+#import <objc/runtime.h>
+
+static const void *kWordModelKey = &kWordModelKey;
 
 @interface Game1ViewController ()
 
@@ -189,6 +192,7 @@
         [card setTitle:word.character forState:UIControlStateNormal];
         [card setTitleColor:[UIColor darkTextColor] forState:UIControlStateNormal];
         card.titleLabel.font = [UIFont boldSystemFontOfSize:42.0f];
+        objc_setAssociatedObject(card, kWordModelKey, word, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
         CGFloat rotation = ((float)rand() / RAND_MAX) * 10.0f - 5.0f;
         card.transform = CGAffineTransformMakeRotation(rotation * M_PI / 180.0f);
@@ -201,55 +205,40 @@
         [self.cards addObject:card];
     }
 
-    // 5. Difficulty selector — added LAST so always on top in z-order
+    // 5. Difficulty selector — visible UIButtons, centered
     CGFloat diffRowY = benchY + benchH - 36.0f;
+    CGFloat centerY = diffRowY + 18.0f;
 
-    UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, diffRowY, 30.0f, 30.0f)];
-    easyLabel.text = @"易";
-    easyLabel.font = [UIFont systemFontOfSize:18.0f];
-    easyLabel.textColor = self.isShuffled ? [self onSurfaceVariantColor] : [self primaryColor];
-    easyLabel.textAlignment = NSTextAlignmentCenter;
-    easyLabel.userInteractionEnabled = NO;
-    easyLabel.tag = 201;
-    [self.canvasView addSubview:easyLabel];
-
-    // Stars — purely visual UILabels (no gesture recognizers)
-    for (NSInteger i = 1; i <= 5; i++) {
-        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 30.0f, diffRowY, 30.0f, 36.0f)];
-        star.tag = 300 + i;
-        star.textAlignment = NSTextAlignmentCenter;
-        star.font = [UIFont systemFontOfSize:22.0f];
-        star.textColor = [UIColor clearColor];
-        star.userInteractionEnabled = NO; // purely visual
-        [self.canvasView addSubview:star];
-    }
-
-    UILabel *hardLabel = [[UILabel alloc] initWithFrame:CGRectMake(395.0f, diffRowY, 30.0f, 30.0f)];
-    hardLabel.text = @"难";
-    hardLabel.font = [UIFont systemFontOfSize:18.0f];
-    hardLabel.textColor = self.isShuffled ? [self primaryColor] : [self onSurfaceVariantColor];
-    hardLabel.textAlignment = NSTextAlignmentCenter;
-    hardLabel.userInteractionEnabled = NO;
-    hardLabel.tag = 202;
-    [self.canvasView addSubview:hardLabel];
-
-    // BUG 1 FIX: Use invisible UIButton overlays for touch targets.
-    // UILabel+UITapGestureRecognizer fails on iOS 9 when UIPanGestureRecognizers exist
-    // on sibling views. UIButton UIControlEventTouchUpInside uses the UIControl touch
-    // tracking path (same as SquishyButton) which is not affected by this iOS 9 bug.
-    // "Easy" touch target — covers 易 label + star 1 zone
     UIButton *easyBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    easyBtn.frame = CGRectMake(175.0f, diffRowY - 4.0f, 80.0f, 44.0f);
-    easyBtn.backgroundColor = [UIColor clearColor];
-    easyBtn.tag = 401; // easy mode
+    easyBtn.frame = CGRectMake(209.0f, centerY - 24.0f, 72.0f, 48.0f);
+    easyBtn.backgroundColor = self.isShuffled ? [self surfaceContainerColor] : [self primaryColor];
+    easyBtn.layer.cornerRadius = 10.0f;
+    easyBtn.tag = 201;
+    easyBtn.titleLabel.font = [UIFont systemFontOfSize:20.0f];
+    [easyBtn setTitle:@"易" forState:UIControlStateNormal];
+    [easyBtn setTitleColor:self.isShuffled ? [self onSurfaceVariantColor] : [UIColor whiteColor] forState:UIControlStateNormal];
     [easyBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.canvasView addSubview:easyBtn];
 
-    // "Hard" touch target — covers star 5 + 难 label zone
+    // Stars — purely visual UILabels, centered between buttons
+    for (NSInteger i = 1; i <= 5; i++) {
+        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(297.0f + (i - 1) * 36.0f, centerY - 20.0f, 30.0f, 40.0f)];
+        star.tag = 300 + i;
+        star.textAlignment = NSTextAlignmentCenter;
+        star.font = [UIFont systemFontOfSize:26.0f];
+        star.textColor = [UIColor clearColor];
+        star.userInteractionEnabled = NO;
+        [self.canvasView addSubview:star];
+    }
+
     UIButton *hardBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    hardBtn.frame = CGRectMake(330.0f, diffRowY - 4.0f, 100.0f, 44.0f);
-    hardBtn.backgroundColor = [UIColor clearColor];
-    hardBtn.tag = 402; // hard mode
+    hardBtn.frame = CGRectMake(487.0f, centerY - 24.0f, 72.0f, 48.0f);
+    hardBtn.backgroundColor = self.isShuffled ? [self primaryColor] : [self surfaceContainerColor];
+    hardBtn.layer.cornerRadius = 10.0f;
+    hardBtn.tag = 202;
+    hardBtn.titleLabel.font = [UIFont systemFontOfSize:20.0f];
+    [hardBtn setTitle:@"难" forState:UIControlStateNormal];
+    [hardBtn setTitleColor:self.isShuffled ? [UIColor whiteColor] : [self onSurfaceVariantColor] forState:UIControlStateNormal];
     [hardBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.canvasView addSubview:hardBtn];
 
@@ -274,9 +263,8 @@
     }
 }
 
-// BUG 1 FIX: UIButton target-action replaces UITapGestureRecognizer on UILabel.
 - (void)difficultyBtnTapped:(UIButton *)sender {
-    BOOL newShuffled = (sender.tag == 402); // 402 = hard, 401 = easy
+    BOOL newShuffled = (sender.tag == 202); // 202 = hard, 201 = easy
     if (newShuffled == self.isShuffled) return;
     self.isShuffled = newShuffled;
 
@@ -292,22 +280,21 @@
     // Rebuild cards with new order
     [self rebuildCards];
 
-    // BUG 1 FIX: After rebuildCards, new card views are on top of the invisible
-    // UIButton touch targets. Bring the buttons back to front so touches reach them.
-    UIButton *easyHitBtn = (UIButton *)[self.canvasView viewWithTag:401];
-    UIButton *hardHitBtn = (UIButton *)[self.canvasView viewWithTag:402];
-    if (easyHitBtn) [self.canvasView bringSubviewToFront:easyHitBtn];
-    if (hardHitBtn) [self.canvasView bringSubviewToFront:hardHitBtn];
+    // Keep buttons on top of rebuilt cards
+    UIButton *easyBtn = (UIButton *)[self.canvasView viewWithTag:201];
+    UIButton *hardBtn = (UIButton *)[self.canvasView viewWithTag:202];
+    if (easyBtn) [self.canvasView bringSubviewToFront:easyBtn];
+    if (hardBtn) [self.canvasView bringSubviewToFront:hardBtn];
 
     // Show/hide check button
     SquishyButton *checkBtn = (SquishyButton *)[self.canvasView viewWithTag:100];
     checkBtn.hidden = !self.isShuffled;
 
-    // Update labels
-    UILabel *easyLabel = (UILabel *)[self.canvasView viewWithTag:201];
-    UILabel *hardLabel = (UILabel *)[self.canvasView viewWithTag:202];
-    easyLabel.textColor = self.isShuffled ? [self onSurfaceVariantColor] : [self primaryColor];
-    hardLabel.textColor = self.isShuffled ? [self primaryColor] : [self onSurfaceVariantColor];
+    // Update button styles
+    easyBtn.backgroundColor = self.isShuffled ? [self surfaceContainerColor] : [self primaryColor];
+    [easyBtn setTitleColor:self.isShuffled ? [self onSurfaceVariantColor] : [UIColor whiteColor] forState:UIControlStateNormal];
+    hardBtn.backgroundColor = self.isShuffled ? [self primaryColor] : [self surfaceContainerColor];
+    [hardBtn setTitleColor:self.isShuffled ? [UIColor whiteColor] : [self onSurfaceVariantColor] forState:UIControlStateNormal];
 
     [self updateStarsDisplay];
 }
@@ -356,6 +343,7 @@
         [card setTitle:word.character forState:UIControlStateNormal];
         [card setTitleColor:[UIColor darkTextColor] forState:UIControlStateNormal];
         card.titleLabel.font = [UIFont boldSystemFontOfSize:42.0f];
+        objc_setAssociatedObject(card, kWordModelKey, word, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
         CGFloat rotation = ((float)rand() / RAND_MAX) * 10.0f - 5.0f;
         card.transform = CGAffineTransformMakeRotation(rotation * M_PI / 180.0f);
@@ -425,7 +413,7 @@
                         card.transform = CGAffineTransformIdentity;
                     }];
                     self.slotOccupants[@(closestSlotIndex)] = card;
-                    [self playWordSound:card.titleLabel.text];
+                    [self playWordSoundForCard:card];
                 }
             } else {
                 [self sendCardBackToBench:card];
@@ -438,8 +426,9 @@
 
 - (void)easyModeCheckPlacement:(UIButton *)card slotIndex:(NSInteger)slotIndex closestSlot:(UIView *)closestSlot {
     WordModel *correctWord = self.words[slotIndex];
+    WordModel *cardWord = objc_getAssociatedObject(card, kWordModelKey);
 
-    if ([card.titleLabel.text isEqualToString:correctWord.character]) {
+    if ([cardWord.character isEqualToString:correctWord.character]) {
         CGPoint targetCenter = [self.canvasView convertPoint:closestSlot.center fromView:closestSlot.superview];
         [UIView animateWithDuration:0.15f animations:^{
             card.center = targetCenter;
@@ -449,10 +438,11 @@
         card.layer.borderColor = [UIColor colorWithRed:46.0f/255.0f green:125.0f/255.0f blue:50.0f/255.0f alpha:1.0f].CGColor;
         self.slotOccupants[@(slotIndex)] = card;
         [self.lockedSlots addObject:@(slotIndex)];
-        [self playWordSound:card.titleLabel.text];
 
         if (self.lockedSlots.count == 16) {
             [self gameComplete];
+        } else {
+            [self playWordSoundForCard:card];
         }
     } else {
         [self sendCardBackToBench:card];
@@ -496,13 +486,14 @@
         if (!card) continue;
         anyPlaced = YES;
 
-        if ([card.titleLabel.text isEqualToString:self.words[i].character]) {
+        WordModel *cardWord = objc_getAssociatedObject(card, kWordModelKey);
+        if ([cardWord.character isEqualToString:self.words[i].character]) {
             [UIView animateWithDuration:0.2f animations:^{
                 card.layer.borderWidth = 3.0f;
                 card.layer.borderColor = [UIColor colorWithRed:46.0f/255.0f green:125.0f/255.0f blue:50.0f/255.0f alpha:1.0f].CGColor;
             }];
             [self.lockedSlots addObject:@(i)];
-            [self playWordSound:card.titleLabel.text];
+            [self playWordSoundForCard:card];
         } else {
             allCorrect = NO;
             [UIView animateWithDuration:0.2f animations:^{
@@ -633,12 +624,10 @@
 
 #pragma mark - Audio
 
-- (void)playWordSound:(NSString *)character {
-    for (WordModel *word in self.words) {
-        if ([word.character isEqualToString:character]) {
-            [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
-            break;
-        }
+- (void)playWordSoundForCard:(UIButton *)card {
+    WordModel *word = objc_getAssociatedObject(card, kWordModelKey);
+    if (word) {
+        [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
     }
 }
 
