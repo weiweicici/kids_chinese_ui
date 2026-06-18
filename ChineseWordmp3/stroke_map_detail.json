@@ -1,0 +1,1122 @@
+[
+  {
+    "position": 0,
+    "char": "一",
+    "gif": 71,
+    "strokes": 1,
+    "frames": 7
+  },
+  {
+    "position": 1,
+    "char": "二",
+    "gif": 82,
+    "strokes": 2,
+    "frames": 17
+  },
+  {
+    "position": 2,
+    "char": "三",
+    "gif": 4,
+    "strokes": 3,
+    "frames": 27
+  },
+  {
+    "position": 3,
+    "char": "四",
+    "gif": 123,
+    "strokes": 5,
+    "frames": 46
+  },
+  {
+    "position": 4,
+    "char": "五",
+    "gif": 57,
+    "strokes": 4,
+    "frames": 40
+  },
+  {
+    "position": 5,
+    "char": "六",
+    "gif": 69,
+    "strokes": 4,
+    "frames": 41
+  },
+  {
+    "position": 6,
+    "char": "七",
+    "gif": 14,
+    "strokes": 2,
+    "frames": 21
+  },
+  {
+    "position": 7,
+    "char": "八",
+    "gif": 79,
+    "strokes": 2,
+    "frames": 17
+  },
+  {
+    "position": 8,
+    "char": "九",
+    "gif": 99,
+    "strokes": 2,
+    "frames": 15
+  },
+  {
+    "position": 9,
+    "char": "十",
+    "gif": 73,
+    "strokes": 2,
+    "frames": 12
+  },
+  {
+    "position": 10,
+    "char": "百",
+    "gif": 75,
+    "strokes": 6,
+    "frames": 48
+  },
+  {
+    "position": 11,
+    "char": "千",
+    "gif": 83,
+    "strokes": 3,
+    "frames": 23
+  },
+  {
+    "position": 12,
+    "char": "个",
+    "gif": 64,
+    "strokes": 3,
+    "frames": 29
+  },
+  {
+    "position": 13,
+    "char": "人",
+    "gif": 21,
+    "strokes": 2,
+    "frames": 15
+  },
+  {
+    "position": 14,
+    "char": "小",
+    "gif": 91,
+    "strokes": 3,
+    "frames": 23
+  },
+  {
+    "position": 15,
+    "char": "大",
+    "gif": 95,
+    "strokes": 3,
+    "frames": 32
+  },
+  {
+    "position": 16,
+    "char": "哥",
+    "gif": 66,
+    "strokes": 10,
+    "frames": 74
+  },
+  {
+    "position": 17,
+    "char": "弟",
+    "gif": 109,
+    "strokes": 7,
+    "frames": 52
+  },
+  {
+    "position": 18,
+    "char": "姐",
+    "gif": 149,
+    "strokes": 8,
+    "frames": 55
+  },
+  {
+    "position": 19,
+    "char": "妹",
+    "gif": 9,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 20,
+    "char": "爷",
+    "gif": 29,
+    "strokes": 6,
+    "frames": 51
+  },
+  {
+    "position": 21,
+    "char": "奶",
+    "gif": 37,
+    "strokes": 5,
+    "frames": 44
+  },
+  {
+    "position": 22,
+    "char": "爸",
+    "gif": 148,
+    "strokes": 8,
+    "frames": 58
+  },
+  {
+    "position": 23,
+    "char": "妈",
+    "gif": 46,
+    "strokes": 6,
+    "frames": 48
+  },
+  {
+    "position": 24,
+    "char": "我",
+    "gif": 67,
+    "strokes": 7,
+    "frames": 53
+  },
+  {
+    "position": 25,
+    "char": "是",
+    "gif": 156,
+    "strokes": 9,
+    "frames": 71
+  },
+  {
+    "position": 26,
+    "char": "宝",
+    "gif": 1,
+    "strokes": 8,
+    "frames": 56
+  },
+  {
+    "position": 27,
+    "char": "贝",
+    "gif": 134,
+    "strokes": 4,
+    "frames": 36
+  },
+  {
+    "position": 28,
+    "char": "亲",
+    "gif": 136,
+    "strokes": 9,
+    "frames": 67
+  },
+  {
+    "position": 29,
+    "char": "爱",
+    "gif": 70,
+    "strokes": 10,
+    "frames": 79
+  },
+  {
+    "position": 30,
+    "char": "的",
+    "gif": 39,
+    "strokes": 8,
+    "frames": 62
+  },
+  {
+    "position": 31,
+    "char": "家",
+    "gif": 113,
+    "strokes": 10,
+    "frames": 77
+  },
+  {
+    "position": 32,
+    "char": "里",
+    "gif": 48,
+    "strokes": 7,
+    "frames": 55
+  },
+  {
+    "position": 33,
+    "char": "外",
+    "gif": 116,
+    "strokes": 5,
+    "frames": 43
+  },
+  {
+    "position": 34,
+    "char": "中",
+    "gif": 94,
+    "strokes": 4,
+    "frames": 41
+  },
+  {
+    "position": 35,
+    "char": "间",
+    "gif": 137,
+    "strokes": 7,
+    "frames": 53
+  },
+  {
+    "position": 36,
+    "char": "土",
+    "gif": 78,
+    "strokes": 3,
+    "frames": 23
+  },
+  {
+    "position": 37,
+    "char": "地",
+    "gif": 85,
+    "strokes": 6,
+    "frames": 48
+  },
+  {
+    "position": 38,
+    "char": "和",
+    "gif": 152,
+    "strokes": 8,
+    "frames": 61
+  },
+  {
+    "position": 39,
+    "char": "气",
+    "gif": 77,
+    "strokes": 4,
+    "frames": 38
+  },
+  {
+    "position": 40,
+    "char": "石",
+    "gif": 84,
+    "strokes": 5,
+    "frames": 46
+  },
+  {
+    "position": 41,
+    "char": "头",
+    "gif": 51,
+    "strokes": 5,
+    "frames": 44
+  },
+  {
+    "position": 42,
+    "char": "刀",
+    "gif": 80,
+    "strokes": 2,
+    "frames": 11
+  },
+  {
+    "position": 43,
+    "char": "叉",
+    "gif": 102,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 44,
+    "char": "它",
+    "gif": 43,
+    "strokes": 5,
+    "frames": 43
+  },
+  {
+    "position": 45,
+    "char": "们",
+    "gif": 42,
+    "strokes": 5,
+    "frames": 47
+  },
+  {
+    "position": 46,
+    "char": "干",
+    "gif": 3,
+    "strokes": 8,
+    "frames": 57
+  },
+  {
+    "position": 47,
+    "char": "吗",
+    "gif": 128,
+    "strokes": 8,
+    "frames": 55
+  },
+  {
+    "position": 48,
+    "char": "你",
+    "gif": 32,
+    "strokes": 7,
+    "frames": 55
+  },
+  {
+    "position": 49,
+    "char": "叫",
+    "gif": 44,
+    "strokes": 5,
+    "frames": 46
+  },
+  {
+    "position": 50,
+    "char": "什",
+    "gif": 60,
+    "strokes": 4,
+    "frames": 36
+  },
+  {
+    "position": 51,
+    "char": "么",
+    "gif": 81,
+    "strokes": 3,
+    "frames": 22
+  },
+  {
+    "position": 52,
+    "char": "今",
+    "gif": 144,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 53,
+    "char": "年",
+    "gif": 59,
+    "strokes": 6,
+    "frames": 49
+  },
+  {
+    "position": 54,
+    "char": "几",
+    "gif": 50,
+    "strokes": 2,
+    "frames": 16
+  },
+  {
+    "position": 55,
+    "char": "岁",
+    "gif": 19,
+    "strokes": 8,
+    "frames": 60
+  },
+  {
+    "position": 56,
+    "char": "住",
+    "gif": 122,
+    "strokes": 7,
+    "frames": 53
+  },
+  {
+    "position": 57,
+    "char": "在",
+    "gif": 15,
+    "strokes": 6,
+    "frames": 49
+  },
+  {
+    "position": 58,
+    "char": "哪",
+    "gif": 133,
+    "strokes": 9,
+    "frames": 69
+  },
+  {
+    "position": 59,
+    "char": "儿",
+    "gif": 38,
+    "strokes": 2,
+    "frames": 21
+  },
+  {
+    "position": 60,
+    "char": "多",
+    "gif": 87,
+    "strokes": 6,
+    "frames": 49
+  },
+  {
+    "position": 61,
+    "char": "少",
+    "gif": 89,
+    "strokes": 4,
+    "frames": 33
+  },
+  {
+    "position": 62,
+    "char": "朋",
+    "gif": 61,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 63,
+    "char": "友",
+    "gif": 68,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 64,
+    "char": "上",
+    "gif": 104,
+    "strokes": 3,
+    "frames": 23
+  },
+  {
+    "position": 65,
+    "char": "下",
+    "gif": 6,
+    "strokes": 3,
+    "frames": 26
+  },
+  {
+    "position": 66,
+    "char": "左",
+    "gif": 40,
+    "strokes": 5,
+    "frames": 46
+  },
+  {
+    "position": 67,
+    "char": "右",
+    "gif": 30,
+    "strokes": 5,
+    "frames": 47
+  },
+  {
+    "position": 68,
+    "char": "日",
+    "gif": 35,
+    "strokes": 4,
+    "frames": 43
+  },
+  {
+    "position": 69,
+    "char": "月",
+    "gif": 16,
+    "strokes": 4,
+    "frames": 40
+  },
+  {
+    "position": 70,
+    "char": "天",
+    "gif": 90,
+    "strokes": 4,
+    "frames": 39
+  },
+  {
+    "position": 71,
+    "char": "明",
+    "gif": 143,
+    "strokes": 8,
+    "frames": 63
+  },
+  {
+    "position": 72,
+    "char": "火",
+    "gif": 23,
+    "strokes": 4,
+    "frames": 42
+  },
+  {
+    "position": 73,
+    "char": "星",
+    "gif": 97,
+    "strokes": 9,
+    "frames": 65
+  },
+  {
+    "position": 74,
+    "char": "漂",
+    "gif": 129,
+    "strokes": 14,
+    "frames": 102
+  },
+  {
+    "position": 75,
+    "char": "亮",
+    "gif": 151,
+    "strokes": 9,
+    "frames": 70
+  },
+  {
+    "position": 76,
+    "char": "太",
+    "gif": 100,
+    "strokes": 4,
+    "frames": 35
+  },
+  {
+    "position": 77,
+    "char": "阳",
+    "gif": 107,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 78,
+    "char": "光",
+    "gif": 88,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 79,
+    "char": "阴",
+    "gif": 56,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 80,
+    "char": "鼠",
+    "gif": 157,
+    "strokes": 13,
+    "frames": 98
+  },
+  {
+    "position": 81,
+    "char": "牛",
+    "gif": 146,
+    "strokes": 4,
+    "frames": 38
+  },
+  {
+    "position": 82,
+    "char": "虎",
+    "gif": 140,
+    "strokes": 8,
+    "frames": 58
+  },
+  {
+    "position": 83,
+    "char": "兔",
+    "gif": 112,
+    "strokes": 8,
+    "frames": 57
+  },
+  {
+    "position": 84,
+    "char": "龙",
+    "gif": 76,
+    "strokes": 5,
+    "frames": 44
+  },
+  {
+    "position": 85,
+    "char": "蛇",
+    "gif": 118,
+    "strokes": 11,
+    "frames": 84
+  },
+  {
+    "position": 86,
+    "char": "马",
+    "gif": 8,
+    "strokes": 3,
+    "frames": 28
+  },
+  {
+    "position": 87,
+    "char": "羊",
+    "gif": 114,
+    "strokes": 6,
+    "frames": 50
+  },
+  {
+    "position": 88,
+    "char": "猴",
+    "gif": 119,
+    "strokes": 12,
+    "frames": 96
+  },
+  {
+    "position": 89,
+    "char": "鸡",
+    "gif": 62,
+    "strokes": 7,
+    "frames": 55
+  },
+  {
+    "position": 90,
+    "char": "狗",
+    "gif": 111,
+    "strokes": 8,
+    "frames": 62
+  },
+  {
+    "position": 91,
+    "char": "猪",
+    "gif": 53,
+    "strokes": 11,
+    "frames": 84
+  },
+  {
+    "position": 92,
+    "char": "生",
+    "gif": 126,
+    "strokes": 5,
+    "frames": 43
+  },
+  {
+    "position": 93,
+    "char": "肖",
+    "gif": 158,
+    "strokes": 8,
+    "frames": 57
+  },
+  {
+    "position": 94,
+    "char": "姓",
+    "gif": 96,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 95,
+    "char": "名",
+    "gif": 135,
+    "strokes": 6,
+    "frames": 50
+  },
+  {
+    "position": 96,
+    "char": "进",
+    "gif": 154,
+    "strokes": 7,
+    "frames": 53
+  },
+  {
+    "position": 97,
+    "char": "门",
+    "gif": 12,
+    "strokes": 3,
+    "frames": 29
+  },
+  {
+    "position": 98,
+    "char": "问",
+    "gif": 74,
+    "strokes": 6,
+    "frames": 48
+  },
+  {
+    "position": 99,
+    "char": "好",
+    "gif": 125,
+    "strokes": 6,
+    "frames": 48
+  },
+  {
+    "position": 100,
+    "char": "走",
+    "gif": 58,
+    "strokes": 7,
+    "frames": 54
+  },
+  {
+    "position": 101,
+    "char": "时",
+    "gif": 130,
+    "strokes": 7,
+    "frames": 53
+  },
+  {
+    "position": 102,
+    "char": "再",
+    "gif": 142,
+    "strokes": 6,
+    "frames": 50
+  },
+  {
+    "position": 103,
+    "char": "见",
+    "gif": 150,
+    "strokes": 7,
+    "frames": 52
+  },
+  {
+    "position": 104,
+    "char": "开",
+    "gif": 117,
+    "strokes": 4,
+    "frames": 42
+  },
+  {
+    "position": 105,
+    "char": "口",
+    "gif": 127,
+    "strokes": 3,
+    "frames": 31
+  },
+  {
+    "position": 106,
+    "char": "请",
+    "gif": 115,
+    "strokes": 10,
+    "frames": 75
+  },
+  {
+    "position": 107,
+    "char": "谢",
+    "gif": 13,
+    "strokes": 12,
+    "frames": 88
+  },
+  {
+    "position": 108,
+    "char": "自",
+    "gif": 124,
+    "strokes": 6,
+    "frames": 47
+  },
+  {
+    "position": 109,
+    "char": "己",
+    "gif": 47,
+    "strokes": 3,
+    "frames": 27
+  },
+  {
+    "position": 110,
+    "char": "高",
+    "gif": 18,
+    "strokes": 10,
+    "frames": 79
+  },
+  {
+    "position": 111,
+    "char": "兴",
+    "gif": 105,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 112,
+    "char": "刚",
+    "gif": 20,
+    "strokes": 6,
+    "frames": 49
+  },
+  {
+    "position": 113,
+    "char": "才",
+    "gif": 54,
+    "strokes": 3,
+    "frames": 29
+  },
+  {
+    "position": 114,
+    "char": "看",
+    "gif": 138,
+    "strokes": 9,
+    "frames": 68
+  },
+  {
+    "position": 115,
+    "char": "了",
+    "gif": 131,
+    "strokes": 2,
+    "frames": 14
+  },
+  {
+    "position": 116,
+    "char": "从",
+    "gif": 72,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 117,
+    "char": "前",
+    "gif": 139,
+    "strokes": 9,
+    "frames": 67
+  },
+  {
+    "position": 118,
+    "char": "故",
+    "gif": 63,
+    "strokes": 8,
+    "frames": 64
+  },
+  {
+    "position": 119,
+    "char": "事",
+    "gif": 17,
+    "strokes": 8,
+    "frames": 63
+  },
+  {
+    "position": 120,
+    "char": "男",
+    "gif": 159,
+    "strokes": 7,
+    "frames": 54
+  },
+  {
+    "position": 121,
+    "char": "他",
+    "gif": 31,
+    "strokes": 5,
+    "frames": 47
+  },
+  {
+    "position": 122,
+    "char": "女",
+    "gif": 22,
+    "strokes": 3,
+    "frames": 28
+  },
+  {
+    "position": 123,
+    "char": "她",
+    "gif": 103,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 124,
+    "char": "咱",
+    "gif": 2,
+    "strokes": 8,
+    "frames": 58
+  },
+  {
+    "position": 125,
+    "char": "都",
+    "gif": 160,
+    "strokes": 10,
+    "frames": 75
+  },
+  {
+    "position": 126,
+    "char": "用",
+    "gif": 55,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 127,
+    "char": "心",
+    "gif": 92,
+    "strokes": 4,
+    "frames": 34
+  },
+  {
+    "position": 128,
+    "char": "树",
+    "gif": 101,
+    "strokes": 9,
+    "frames": 65
+  },
+  {
+    "position": 129,
+    "char": "木",
+    "gif": 24,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 130,
+    "char": "森",
+    "gif": 10,
+    "strokes": 12,
+    "frames": 90
+  },
+  {
+    "position": 131,
+    "char": "林",
+    "gif": 120,
+    "strokes": 8,
+    "frames": 63
+  },
+  {
+    "position": 132,
+    "char": "山",
+    "gif": 52,
+    "strokes": 3,
+    "frames": 30
+  },
+  {
+    "position": 133,
+    "char": "区",
+    "gif": 93,
+    "strokes": 4,
+    "frames": 41
+  },
+  {
+    "position": 134,
+    "char": "草",
+    "gif": 141,
+    "strokes": 9,
+    "frames": 69
+  },
+  {
+    "position": 135,
+    "char": "原",
+    "gif": 98,
+    "strokes": 10,
+    "frames": 78
+  },
+  {
+    "position": 136,
+    "char": "江",
+    "gif": 155,
+    "strokes": 6,
+    "frames": 47
+  },
+  {
+    "position": 137,
+    "char": "河",
+    "gif": 121,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 138,
+    "char": "湖",
+    "gif": 11,
+    "strokes": 12,
+    "frames": 86
+  },
+  {
+    "position": 139,
+    "char": "海",
+    "gif": 65,
+    "strokes": 10,
+    "frames": 76
+  },
+  {
+    "position": 140,
+    "char": "风",
+    "gif": 33,
+    "strokes": 4,
+    "frames": 41
+  },
+  {
+    "position": 141,
+    "char": "雨",
+    "gif": 110,
+    "strokes": 8,
+    "frames": 58
+  },
+  {
+    "position": 142,
+    "char": "云",
+    "gif": 5,
+    "strokes": 4,
+    "frames": 43
+  },
+  {
+    "position": 143,
+    "char": "雪",
+    "gif": 27,
+    "strokes": 11,
+    "frames": 80
+  },
+  {
+    "position": 144,
+    "char": "耳",
+    "gif": 41,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 145,
+    "char": "朵",
+    "gif": 45,
+    "strokes": 6,
+    "frames": 52
+  },
+  {
+    "position": 146,
+    "char": "嘴",
+    "gif": 34,
+    "strokes": 16,
+    "frames": 134
+  },
+  {
+    "position": 147,
+    "char": "牙",
+    "gif": 108,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 148,
+    "char": "鼻",
+    "gif": 145,
+    "strokes": 14,
+    "frames": 100
+  },
+  {
+    "position": 149,
+    "char": "毛",
+    "gif": 36,
+    "strokes": 4,
+    "frames": 34
+  },
+  {
+    "position": 150,
+    "char": "眉",
+    "gif": 106,
+    "strokes": 9,
+    "frames": 69
+  },
+  {
+    "position": 151,
+    "char": "毛",
+    "gif": 86,
+    "strokes": 4,
+    "frames": 40
+  },
+  {
+    "position": 152,
+    "char": "双",
+    "gif": 26,
+    "strokes": 4,
+    "frames": 37
+  },
+  {
+    "position": 153,
+    "char": "目",
+    "gif": 49,
+    "strokes": 5,
+    "frames": 45
+  },
+  {
+    "position": 154,
+    "char": "眼",
+    "gif": 25,
+    "strokes": 11,
+    "frames": 80
+  },
+  {
+    "position": 155,
+    "char": "睛",
+    "gif": 153,
+    "strokes": 13,
+    "frames": 98
+  },
+  {
+    "position": 156,
+    "char": "鬼",
+    "gif": 7,
+    "strokes": 8,
+    "frames": 59
+  },
+  {
+    "position": 157,
+    "char": "脸",
+    "gif": 147,
+    "strokes": 11,
+    "frames": 80
+  },
+  {
+    "position": 158,
+    "char": "忘",
+    "gif": 132,
+    "strokes": 7,
+    "frames": 52
+  },
+  {
+    "position": 159,
+    "char": "记",
+    "gif": 28,
+    "strokes": 5,
+    "frames": 46
+  }
+]

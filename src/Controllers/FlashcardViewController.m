@@ -35,11 +35,16 @@
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
     
-    // Stop recording and timers
     [self.gifPlayer stop];
     [[AudioManager sharedManager] stopCurrentSound];
+    
     [self.recorder stop];
+    self.recorder.delegate = nil;
+    self.recorder = nil;
+    
     [self.recordedPlayer stop];
+    self.recordedPlayer.delegate = nil;
+    self.recordedPlayer = nil;
 }
 
 #pragma mark - UI Setup

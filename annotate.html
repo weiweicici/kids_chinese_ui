@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔画 & 发音 匹配工具</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif; background: #f0f2f5; padding: 16px; color: #333; }
+h1 { font-size: 22px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+#book-tabs { display: flex; gap: 0; margin-bottom: 12px; }
+#book-tabs button { flex: 1; padding: 10px; font-size: 16px; border: 2px solid #ddd; background: #fff; cursor: pointer; border-radius: 0; font-weight: bold; }
+#book-tabs button:first-child { border-radius: 8px 0 0 8px; }
+#book-tabs button:last-child { border-radius: 0 8px 8px 0; }
+#book-tabs button.active { background: #2196F3; color: #fff; border-color: #2196F3; }
+#status-bar { font-size: 14px; color: #666; margin-bottom: 16px; padding: 8px 12px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+#status-bar .ok { color: #4CAF50; } #status-bar .warn { color: #ff9800; }
+.lesson-card { background: #fff; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+.lesson-header { padding: 14px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; font-size: 16px; font-weight: 600; }
+.lesson-header:hover { background: #f8f9fa; }
+.lesson-header .badge { font-size: 13px; font-weight: normal; padding: 2px 10px; border-radius: 10px; background: #e0e0e0; }
+.lesson-header .badge.done { background: #c8e6c9; color: #2e7d32; }
+.lesson-body { padding: 12px; border-top: 1px solid #eee; display: none; }
+.lesson-body.open { display: block; }
+
+/* Resource bank section */
+.bank-title { font-size: 13px; color: #888; margin-bottom: 8px; font-weight: 600; }
+.resource-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 16px; }
+.resource-card { border: 2px solid #e0e0e0; border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; background: #fafafa; transition: all 0.15s; min-height: 110px; display: flex; flex-direction: column; align-items: center; }
+.resource-card:hover { border-color: #90caf9; background: #e3f2fd; }
+.resource-card.selected { border-color: #2196F3; background: #bbdefb; box-shadow: 0 0 0 2px rgba(33,150,243,0.3); }
+.resource-card.assigned { opacity: 0.3; pointer-events: none; }
+.resource-card .r-idx { font-size: 10px; color: #999; margin-bottom: 2px; }
+.resource-card img { width: 50px; height: 50px; object-fit: contain; border-radius: 4px; background: #fff; }
+.resource-card .play-btn { font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #e3f2fd; border: none; margin-top: 2px; line-height: 1; }
+.resource-card .play-btn:hover { background: #bbdefb; }
+
+/* Character slots grid */
+.slot-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 12px; }
+.slot-card { border: 2px dashed #bbb; border-radius: 8px; padding: 6px; text-align: center; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.15s; position: relative; background: #fff; }
+.slot-card.dragover { border-color: #2196F3; background: #e3f2fd; }
+.slot-card.assigned { border-style: solid; border-color: #4CAF50; background: #f1f8e9; }
+.slot-card .char-label { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
+.slot-card .char-pinyin { font-size: 10px; color: #999; margin-bottom: 2px; }
+.slot-card img { width: 50px; height: 50px; object-fit: contain; border-radius: 4px; background: #fff; }
+.slot-card .play-btn { font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #e8f5e9; border: none; margin-top: 2px; line-height: 1; }
+.slot-card .play-btn:hover { background: #c8e6c9; }
+.slot-card .unassign-btn { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: #f44336; color: #fff; border: none; font-size: 12px; cursor: pointer; display: none; align-items: center; justify-content: center; line-height: 1; }
+.slot-card.assigned .unassign-btn { display: flex; }
+.slot-card .empty-text { font-size: 11px; color: #bbb; }
+.slot-card audio { display: none; }
+
+/* Export button */
+#export-btn { display: block; width: 100%; padding: 14px; font-size: 18px; background: #2196F3; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 16px; }
+#export-btn:hover { background: #1976D2; }
+#result { margin-top: 12px; padding: 12px; background: #1e1e1e; color: #0f0; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 300px; overflow: auto; display: none; white-space: pre-wrap; }
+
+@media (max-width: 600px) {
+  .resource-grid, .slot-grid { grid-template-columns: repeat(4, 1fr); }
+  .resource-card, .slot-card { min-height: 90px; }
+  .resource-card img, .slot-card img { width: 40px; height: 40px; }
+}
+</style>
+</head>
+<body>
+
+<h1>笔画 & 发音 匹配工具</h1>
+
+<div id="book-tabs">
+  <button data-book="1" class="active" onclick="switchBook(1)">第一册</button>
+  <button data-book="2" onclick="switchBook(2)">第二册</button>
+  <button data-book="3" onclick="switchBook(3)">第三册</button>
+</div>
+
+<div id="status-bar">
+  <span id="status-text">加载中...</span>
+  <span id="audio-indicator">🔇</span>
+</div>
+
+<div id="lessons-container"></div>
+
+<button id="export-btn" onclick="exportJSON()">📥 导出映射 JSON</button>
+<div id="result"></div>
+
+<script>
+// ================ State ================
+const state = {
+  currentBook: 1,
+  lessons: [],
+  assignments: {},  // "{lesson}-{wordIdx}" → resourceIdx (1-based)
+  selectedResource: null,
+};
+
+// ================ CSV Loading ================
+async function loadBook(bookNum) {
+  state.currentBook = bookNum;
+  state.assignments = {};
+  state.selectedResource = null;
+  document.getElementById('status-text').textContent = '加载中...';
+  document.getElementById('lessons-container').innerHTML = '';
+  
+  const resp = await fetch(`Textbooks/book${bookNum}.txt`);
+  const text = await resp.text();
+  state.lessons = parseCSV(text);
+  render();
+  updateStatus();
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const lessonMap = {};
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',');
+    if (parts.length < 4) continue;
+    const book = parseInt(parts[0]);
+    const lesson = parseInt(parts[1]);
+    const idx = parseInt(parts[2]);
+    const char = parts[3];
+    const pinyin = parts.length > 4 ? parts[4] : '';
+    if (book !== state.currentBook) continue;
+    if (!lessonMap[lesson]) lessonMap[lesson] = [];
+    lessonMap[lesson].push({ char, wordIndex: idx, pinyin });
+  }
+  return Object.keys(lessonMap).sort((a,b) => a-b).map(k => ({
+    lessonNumber: parseInt(k),
+    chars: lessonMap[k].sort((a,b) => a.wordIndex - b.wordIndex)
+  }));
+}
+
+// ================ Rendering ================
+function render() {
+  const container = document.getElementById('lessons-container');
+  container.innerHTML = '';
+  
+  state.lessons.forEach(lesson => {
+    const card = document.createElement('div');
+    card.className = 'lesson-card';
+    card.dataset.lesson = lesson.lessonNumber;
+    
+    const header = document.createElement('div');
+    header.className = 'lesson-header';
+    header.innerHTML = `<span>第${lesson.lessonNumber}课 (${lesson.chars.length}个字)</span><span class="badge" id="badge-${lesson.lessonNumber}">0/${lesson.chars.length}</span>`;
+    header.onclick = () => toggleLesson(lesson.lessonNumber);
+    
+    const body = document.createElement('div');
+    body.className = 'lesson-body';
+    body.id = `body-${lesson.lessonNumber}`;
+    
+    // Build character slots
+    const slotsDiv = document.createElement('div');
+    slotsDiv.className = 'slot-grid';
+    slotsDiv.id = `slots-${lesson.lessonNumber}`;
+    
+    lesson.chars.forEach(ch => {
+      const slot = document.createElement('div');
+      slot.className = 'slot-card';
+      slot.dataset.lesson = lesson.lessonNumber;
+      slot.dataset.wordIdx = ch.wordIndex;
+      slot.dataset.char = ch.char;
+      slot.innerHTML = `
+        <span class="char-label">${ch.char}</span>
+        <span class="char-pinyin">${pinyinDisplay(ch.pinyin)}</span>
+        <div class="slot-content" id="slot-content-${lesson.lessonNumber}-${ch.wordIndex}">
+          <span class="empty-text">拖入GIF</span>
+        </div>
+        <button class="unassign-btn" onclick="event.stopPropagation(); unassign(${lesson.lessonNumber}, ${ch.wordIndex})">×</button>
+        <audio id="slot-audio-${lesson.lessonNumber}-${ch.wordIndex}"></audio>
+      `;
+      // Click to assign selected resource
+      slot.addEventListener('click', () => slotClick(lesson.lessonNumber, ch.wordIndex));
+      // Drag and drop
+      slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('dragover'); });
+      slot.addEventListener('dragleave', () => slot.classList.remove('dragover'));
+      slot.addEventListener('drop', e => {
+        e.preventDefault();
+        slot.classList.remove('dragover');
+        const resIdx = parseInt(e.dataTransfer.getData('text/plain'));
+        if (resIdx) assign(resIdx, lesson.lessonNumber, ch.wordIndex);
+      });
+      slotsDiv.appendChild(slot);
+    });
+    body.appendChild(slotsDiv);
+    
+    // Resource bank
+    const bankTitle = document.createElement('div');
+    bankTitle.className = 'bank-title';
+    bankTitle.textContent = 'GIF + 发音资源（点击选择，再点上方汉字槽归位）';
+    body.appendChild(bankTitle);
+    
+    const bank = document.createElement('div');
+    bank.className = 'resource-grid';
+    bank.id = `bank-${lesson.lessonNumber}`;
+    
+    const startIdx = (lesson.lessonNumber - 1) * 16 + 1;
+    for (let i = startIdx; i < startIdx + 16; i++) {
+      const card2 = document.createElement('div');
+      card2.className = 'resource-card';
+      card2.dataset.resIdx = i;
+      card2.draggable = true;
+      card2.innerHTML = `
+        <span class="r-idx">#${i}</span>
+        <img src="ChineseWordmp3/${state.currentBook}_ch${i}.gif" alt="GIF ${i}" loading="lazy" onerror="this.style.display='none'">
+        <button class="play-btn" onclick="event.stopPropagation(); playResourceAudio(${i})">▶</button>
+        <audio id="res-audio-${i}" preload="none"></audio>
+      `;
+      // Drag start
+      card2.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', String(i));
+        card2.classList.add('selected');
+      });
+      card2.addEventListener('dragend', () => card2.classList.remove('selected'));
+      // Click to select
+      card2.addEventListener('click', () => selectResource(i));
+      bank.appendChild(card2);
+    }
+    body.appendChild(bank);
+    
+    card.appendChild(header);
+    card.appendChild(body);
+    container.appendChild(card);
+  });
+}
+
+function pinyinDisplay(py) {
+  if (!py || py === '') return '';
+  const tones = {'1':'ā','2':'á','3':'ǎ','4':'à','5':'a'};
+  return py.replace(/([aeiouü]+)(\d)/g, (m, v, t) => {
+    const replacements = {
+      'a1':'ā','a2':'á','a3':'ǎ','a4':'à','a5':'a',
+      'e1':'ē','e2':'é','e3':'ě','e4':'è','e5':'e',
+      'i1':'ī','i2':'í','i3':'ǐ','i4':'ì','i5':'i',
+      'o1':'ō','o2':'ó','o3':'ǒ','o4':'ò','o5':'o',
+      'u1':'ū','u2':'ú','u3':'ǔ','u4':'ù','u5':'u',
+      'ü1':'ǖ','ü2':'ǘ','ü3':'ǚ','ü4':'ǜ','ü5':'ü',
+    };
+    return replacements[v + t] || (v + t);
+  });
+}
+
+// ================ Interactions ================
+function toggleLesson(num) { 
+  const body = document.getElementById(`body-${num}`);
+  body.classList.toggle('open');
+}
+
+function selectResource(idx) {
+  // Deselect previous
+  document.querySelectorAll('.resource-card.selected').forEach(el => el.classList.remove('selected'));
+  state.selectedResource = idx;
+  const el = document.querySelector(`.resource-card[data-res-idx="${idx}"]`);
+  if (el) el.classList.add('selected');
+  playResourcePreview(idx);
+}
+
+function slotClick(lesson, wordIdx) {
+  if (state.selectedResource === null) return;
+  assign(state.selectedResource, lesson, wordIdx);
+  state.selectedResource = null;
+  document.querySelectorAll('.resource-card.selected').forEach(el => el.classList.remove('selected'));
+}
+
+function assign(resIdx, lesson, wordIdx) {
+  const key = `${lesson}-${wordIdx}`;
+  // If this resource was previously assigned elsewhere, unassign it
+  for (const [k, v] of Object.entries(state.assignments)) {
+    if (v === resIdx) {
+      delete state.assignments[k];
+      updateSlot(k.split('-')[0], k.split('-')[1]);
+    }
+  }
+  // If this slot had another resource, mark it as unassigned
+  if (state.assignments[key]) {
+    updateBank(state.assignments[key], true);
+  }
+  
+  state.assignments[key] = resIdx;
+  updateSlot(lesson, wordIdx);
+  updateBank(resIdx, false);
+  updateStatus();
+}
+
+function unassign(lesson, wordIdx) {
+  const key = `${lesson}-${wordIdx}`;
+  const resIdx = state.assignments[key];
+  if (!resIdx) return;
+  delete state.assignments[key];
+  updateSlot(lesson, wordIdx);
+  updateBank(resIdx, true);
+  updateStatus();
+}
+
+function updateSlot(lesson, wordIdx) {
+  const content = document.getElementById(`slot-content-${lesson}-${wordIdx}`);
+  const slot = content?.closest('.slot-card');
+  if (!slot) return;
+  const key = `${lesson}-${wordIdx}`;
+  const resIdx = state.assignments[key];
+  const audio = document.getElementById(`slot-audio-${lesson}-${wordIdx}`);
+  
+  if (resIdx) {
+    const book = state.currentBook;
+    content.innerHTML = `
+      <img src="ChineseWordmp3/${book}_ch${resIdx}.gif" alt="GIF ${resIdx}" onerror="this.style.display='none'">
+      <button class="play-btn" onclick="event.stopPropagation(); playSlotAudio(${lesson}, ${wordIdx})">▶</button>
+    `;
+    audio.src = `ChineseWordmp3/${book}-${Math.floor((resIdx-1)/16)+1}-${(resIdx-1)%16+1}.mp3`;
+    slot.classList.add('assigned');
+  } else {
+    content.innerHTML = `<span class="empty-text">拖入GIF</span>`;
+    audio.removeAttribute('src');
+    slot.classList.remove('assigned');
+  }
+}
+
+function updateBank(resIdx, show) {
+  const card = document.querySelector(`.resource-card[data-res-idx="${resIdx}"]`);
+  if (card) {
+    card.classList.toggle('assigned', !show);
+  }
+}
+
+function updateStatus() {
+  const total = 160;
+  const assigned = Object.keys(state.assignments).length;
+  document.getElementById('status-text').textContent = `已匹配: ${assigned}/${total} 个字`;
+  const badge = assigned === total ? '✅ 全部完成' : `已匹配 ${assigned}/${total}`;
+  // Update lesson badges
+  state.lessons.forEach(lesson => {
+    const badgeEl = document.getElementById(`badge-${lesson.lessonNumber}`);
+    if (badgeEl) {
+      const count = lesson.chars.filter(ch => state.assignments[`${lesson.lessonNumber}-${ch.wordIndex}`]).length;
+      badgeEl.textContent = `${count}/${lesson.chars.length}`;
+      badgeEl.className = `badge${count === lesson.chars.length ? ' done' : ''}`;
+    }
+  });
+}
+
+// ================ Audio ================
+let currentAudio = null;
+
+function playResourcePreview(idx) {
+  // Quick preview: play the audio when selecting a resource card
+  playResourceAudio(idx);
+}
+
+function playResourceAudio(idx) {
+  const book = state.currentBook;
+  const lesson = Math.floor((idx - 1) / 16) + 1;
+  const word = (idx - 1) % 16 + 1;
+  const src = `ChineseWordmp3/${book}-${lesson}-${word}.mp3`;
+  playAudio(src);
+}
+
+function playSlotAudio(lesson, wordIdx) {
+  const key = `${lesson}-${wordIdx}`;
+  const resIdx = state.assignments[key];
+  if (!resIdx) return;
+  const book = state.currentBook;
+  const rLesson = Math.floor((resIdx - 1) / 16) + 1;
+  const rWord = (resIdx - 1) % 16 + 1;
+  const src = `ChineseWordmp3/${book}-${rLesson}-${rWord}.mp3`;
+  playAudio(src);
+}
+
+function playAudio(src) {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  const audio = new Audio(src);
+  currentAudio = audio;
+  audio.play().catch(e => console.log('Audio play error:', e));
+  document.getElementById('audio-indicator').textContent = '🔊';
+  audio.onended = () => { document.getElementById('audio-indicator').textContent = '🔇'; currentAudio = null; };
+  audio.onerror = () => { document.getElementById('audio-indicator').textContent = '❌'; };
+}
+
+// ================ Export JSON ================
+function exportJSON() {
+  const book = state.currentBook;
+  const gifMap = {};
+  const audioMap = {};
+  
+  // Build maps from assignments
+  for (const [key, resIdx] of Object.entries(state.assignments)) {
+    const [lesson, wordIdx] = key.split('-').map(Number);
+    const defaultGifIdx = (lesson - 1) * 16 + wordIdx;
+    gifMap[String(defaultGifIdx)] = resIdx;
+    
+    // Audio: correct file → actual file
+    const rLesson = Math.floor((resIdx - 1) / 16) + 1;
+    const rWord = (resIdx - 1) % 16 + 1;
+    const correctAudio = `${book}-${lesson}-${wordIdx}`;
+    const actualAudio = `${book}-${rLesson}-${rWord}`;
+    if (correctAudio !== actualAudio) {
+      audioMap[correctAudio] = actualAudio;
+    }
+  }
+  
+  const result = JSON.stringify({ book, gifMap, audioMap }, null, 2);
+  
+  // Download
+  const blob = new Blob([result], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `stroke_map_${book}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  // Show preview
+  const resDiv = document.getElementById('result');
+  resDiv.textContent = result;
+  resDiv.style.display = 'block';
+  
+  document.getElementById('status-text').textContent += ' ✅ JSON已导出!';
+}
+
+// ================ Book Switching ================
+async function switchBook(num) {
+  document.querySelectorAll('#book-tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#book-tabs button[data-book="${num}"]`).classList.add('active');
+  await loadBook(num);
+}
+
+// ================ Init ================
+document.addEventListener('DOMContentLoaded', () => loadBook(1));
+</script>
+</body>
+</html>

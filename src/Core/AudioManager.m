@@ -3,6 +3,7 @@
 
 @interface AudioManager () <AVAudioPlayerDelegate>
 @property (strong, nonatomic) AVAudioPlayer *player;
+@property (strong, nonatomic) NSMutableArray *retiredPlayers;
 @end
 
 @implementation AudioManager
@@ -46,11 +47,17 @@
 
 - (void)stopCurrentSound {
     if (self.player) {
-        if (self.player.isPlaying) {
-            [self.player stop];
+        AVAudioPlayer *oldPlayer = self.player;
+        oldPlayer.delegate = nil;
+        if (oldPlayer.isPlaying) {
+            [oldPlayer stop];
         }
-        self.player.delegate = nil;
-        self.player = nil; // Deallocate player immediately
+        self.player = nil;
+        [self.retiredPlayers addObject:oldPlayer];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            [self.retiredPlayers removeObject:oldPlayer];
+        });
     }
 }
 
@@ -61,10 +68,15 @@
 #pragma mark - AVAudioPlayerDelegate
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
-    // Release resources immediately upon completion of sound
     if (player == self.player) {
-        self.player.delegate = nil;
+        AVAudioPlayer *oldPlayer = self.player;
+        oldPlayer.delegate = nil;
         self.player = nil;
+        [self.retiredPlayers addObject:oldPlayer];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            [self.retiredPlayers removeObject:oldPlayer];
+        });
     }
 }
 

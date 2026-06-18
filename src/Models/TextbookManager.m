@@ -25,121 +25,141 @@
 }
 
 - (void)loadAllTextbooks {
+    // Build pinyin lookup from CSV (char → pinyinWithTone)
+    NSMutableDictionary *pinyinLookup = [NSMutableDictionary dictionary];
     for (NSInteger b = 1; b <= 3; b++) {
-        NSString *path = [self pathForBook:b];
-        if (!path) {
-            NSLog(@"Warning: Could not find textbook data path for book %ld", (long)b);
-            continue;
+        NSString *csvPath = [self resolvePath:[NSString stringWithFormat:@"Textbooks/book%ld.txt", (long)b]];
+        if (csvPath) {
+            NSString *content = [NSString stringWithContentsOfFile:csvPath encoding:NSUTF8StringEncoding error:nil];
+            if (content) {
+                NSArray *lines = [content componentsSeparatedByString:@"\n"];
+                for (NSString *line in lines) {
+                    NSString *trimmed = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                    if (trimmed.length == 0) continue;
+                    NSArray *parts = [trimmed componentsSeparatedByString:@","];
+                    if (parts.count < 6) continue;
+                    if ([parts[0] isEqualToString:@"册"]) continue;
+                    NSString *ch = parts[3];
+                    NSString *py = parts[4];
+                    NSString *pyPlain = parts[5];
+                    if (!pinyinLookup[ch]) {
+                        pinyinLookup[ch] = @[py, pyPlain];
+                    }
+                }
+            }
         }
-        
-        NSError *error = nil;
-        NSString *content = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
-        if (error || !content) {
-            NSLog(@"Error reading textbook file: %@", error);
-            continue;
-        }
-        
-        // Parse CSV content
-        NSArray *lines = [content componentsSeparatedByString:@"\n"];
-        NSMutableDictionary<NSNumber *, NSMutableArray<WordModel *> *> *lessonsWords = [NSMutableDictionary dictionary];
-        
-        for (NSString *line in lines) {
-            NSString *trimmedLine = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            if (trimmedLine.length == 0) {
-                continue;
-            }
-            
-            // Split by comma
-            NSArray *components = [trimmedLine componentsSeparatedByString:@","];
-            if (components.count < 6) {
-                continue;
-            }
-            
-            // Check if header line
-            if ([components[0] isEqualToString:@"册"]) {
-                continue;
-            }
-            
-            NSInteger book = [components[0] integerValue];
-            NSInteger lesson = [components[1] integerValue];
-            NSInteger wordIdx = [components[2] integerValue];
-            NSString *character = components[3];
-            NSString *pinyinWithTone = components[4];
-            NSString *pinyinWithoutTone = components[5];
-            
-            WordModel *word = [[WordModel alloc] init];
-            word.bookNumber = book;
-            word.lessonNumber = lesson;
-            word.wordIndex = wordIdx;
-            word.character = character;
-            word.pinyinWithTone = pinyinWithTone;
-            word.pinyinWithoutTone = pinyinWithoutTone;
-            
-            NSNumber *lessonKey = @(lesson);
-            if (!lessonsWords[lessonKey]) {
-                lessonsWords[lessonKey] = [NSMutableArray array];
-            }
-            [lessonsWords[lessonKey] addObject:word];
-        }
-        
-        // Convert lessonsWords to LessonModel array sorted by lesson number
+    }
+
+    // Load chapter.plist to get session order per book
+    NSString *chapterPath = [self resolvePath:@"ChineseWordmp3/chapter.plist"];
+    if (!chapterPath) {
+        NSLog(@"Error: chapter.plist not found");
+        return;
+    }
+    NSArray *chapterData = [NSArray arrayWithContentsOfFile:chapterPath];
+    if (!chapterData || chapterData.count < 3) {
+        NSLog(@"Error: invalid chapter.plist");
+        return;
+    }
+
+    for (NSInteger bookIdx = 0; bookIdx < 3; bookIdx++) {
+        NSInteger bookNumber = bookIdx + 1;
+        NSArray *sessionNames = chapterData[bookIdx];
         NSMutableArray<LessonModel *> *lessonModels = [NSMutableArray array];
-        NSArray *sortedLessonKeys = [[lessonsWords allKeys] sortedArrayUsingSelector:@selector(compare:)];
-        
-        for (NSNumber *lessonKey in sortedLessonKeys) {
-            NSArray<WordModel *> *words = lessonsWords[lessonKey];
-            
-            // Sort words by wordIndex to guarantee 1-16 ordering
-            NSArray<WordModel *> *sortedWords = [words sortedArrayUsingComparator:^NSComparisonResult(WordModel *w1, WordModel *w2) {
-                return [@(w1.wordIndex) compare:@(w2.wordIndex)];
-            }];
-            
+
+        for (NSString *sessionName in sessionNames) {
+            // Only process session_* (not review_*)
+            if (![sessionName hasPrefix:@"session_"]) continue;
+
+            NSArray *parts = [sessionName componentsSeparatedByString:@"-"];
+            if (parts.count < 2) continue;
+            NSString *plistPath = [self resolvePath:[NSString stringWithFormat:@"ChineseWordmp3/%@.plist", sessionName]];
+            if (!plistPath) {
+                NSLog(@"Warning: plist not found: %@", sessionName);
+                continue;
+            }
+
+            NSDictionary *sessionDict = [NSDictionary dictionaryWithContentsOfFile:plistPath];
+            if (!sessionDict) {
+                NSLog(@"Warning: cannot read plist: %@", sessionName);
+                continue;
+            }
+
+            NSInteger lessonNumber = [parts[1] integerValue];
+            NSArray *wordsData = sessionDict[@"words"];
+            if (!wordsData || wordsData.count == 0) continue;
+
+            NSMutableArray<WordModel *> *wordModels = [NSMutableArray array];
+            for (NSInteger i = 0; i < wordsData.count; i++) {
+                NSDictionary *wd = wordsData[i];
+                NSString *character = wd[@"labelText"];
+                NSString *animation = wd[@"animation"];
+                NSString *sound = wd[@"sound"]; // e.g., "0_0"
+
+                WordModel *word = [[WordModel alloc] init];
+                word.bookNumber = bookNumber;
+                word.lessonNumber = lessonNumber;
+                word.wordIndex = i + 1; // 1-based
+                word.character = character;
+
+                // Set pinyin from CSV lookup
+                NSArray *pyData = pinyinLookup[character];
+                if (pyData) {
+                    word.pinyinWithTone = pyData[0];
+                    word.pinyinWithoutTone = pyData[1];
+                } else {
+                    word.pinyinWithTone = @"";
+                    word.pinyinWithoutTone = @"";
+                }
+
+                // Set GIF override if animation is provided
+                if (animation && animation.length > 0) {
+                    word.strokeGifNameOverride = [NSString stringWithFormat:@"%@.gif", animation];
+                }
+
+                [wordModels addObject:word];
+            }
+
             LessonModel *lesson = [[LessonModel alloc] init];
-            lesson.bookNumber = b;
-            lesson.lessonNumber = [lessonKey integerValue];
-            lesson.words = sortedWords;
-            
+            lesson.bookNumber = bookNumber;
+            lesson.lessonNumber = lessonNumber;
+            lesson.words = wordModels;
+
             [lessonModels addObject:lesson];
         }
-        
-        self.booksData[@(b)] = lessonModels;
+
+        // Sort lessons by lessonNumber
+        [lessonModels sortUsingComparator:^NSComparisonResult(LessonModel *a, LessonModel *b) {
+            return [@(a.lessonNumber) compare:@(b.lessonNumber)];
+        }];
+
+        self.booksData[@(bookNumber)] = lessonModels;
     }
 }
 
-- (NSString *)pathForBook:(NSInteger)bookNumber {
-    NSString *fileName = nil;
-    if (bookNumber == 1) {
-        fileName = @"book1";
-    } else if (bookNumber == 2) {
-        fileName = @"book2";
-    } else if (bookNumber == 3) {
-        fileName = @"book3";
-    }
-    
-    // 1. Try NSBundle
-    NSString *path = [[NSBundle mainBundle] pathForResource:fileName ofType:@"txt"];
-    if (path && [[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
-    }
-    
-    // Try bundle Textbooks directory
-    path = [[NSBundle mainBundle] pathForResource:fileName ofType:@"txt" inDirectory:@"Textbooks"];
-    if (path && [[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
-    }
-    
-    // 2. Try absolute workspace path
-    path = [NSString stringWithFormat:@"/Users/macmini/Downloads/kids_chinese_ui/Textbooks/%@.txt", fileName];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
-    }
-    
-    // 3. Try relative path
-    path = [NSString stringWithFormat:@"Textbooks/%@.txt", fileName];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
-    }
-    
+- (NSString *)resolvePath:(NSString *)relativePath {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    // 1. Split relative path into directory + filename
+    NSString *dir = [relativePath stringByDeletingLastPathComponent];
+    NSString *file = [relativePath lastPathComponent];
+    NSString *ext = [file pathExtension];
+    NSString *name = [file stringByDeletingPathExtension];
+
+    // 2. Try bundle subdirectory
+    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:ext inDirectory:dir];
+    if (path && [fm fileExistsAtPath:path]) return path;
+
+    // 3. Try bundle root
+    path = [[NSBundle mainBundle] pathForResource:name ofType:ext];
+    if (path && [fm fileExistsAtPath:path]) return path;
+
+    // 4. Try absolute workspace path
+    path = [NSString stringWithFormat:@"/Users/macmini/Downloads/kids_chinese_ui/%@", relativePath];
+    if ([fm fileExistsAtPath:path]) return path;
+
+    // 5. Try relative to cwd
+    if ([fm fileExistsAtPath:relativePath]) return relativePath;
+
     return nil;
 }
 
