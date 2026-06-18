@@ -202,35 +202,56 @@
     }
 
     // 5. Difficulty selector — added LAST so always on top in z-order
-    UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, benchY + benchH - 36.0f, 30.0f, 30.0f)];
+    CGFloat diffRowY = benchY + benchH - 36.0f;
+
+    UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, diffRowY, 30.0f, 30.0f)];
     easyLabel.text = @"易";
     easyLabel.font = [UIFont systemFontOfSize:18.0f];
     easyLabel.textColor = self.isShuffled ? [self onSurfaceVariantColor] : [self primaryColor];
     easyLabel.textAlignment = NSTextAlignmentCenter;
+    easyLabel.userInteractionEnabled = NO;
     easyLabel.tag = 201;
     [self.canvasView addSubview:easyLabel];
 
+    // Stars — purely visual UILabels (no gesture recognizers)
     for (NSInteger i = 1; i <= 5; i++) {
-        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 30.0f, benchY + benchH - 36.0f, 30.0f, 36.0f)];
+        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 30.0f, diffRowY, 30.0f, 36.0f)];
         star.tag = 300 + i;
         star.textAlignment = NSTextAlignmentCenter;
         star.font = [UIFont systemFontOfSize:22.0f];
         star.textColor = [UIColor clearColor];
-        star.userInteractionEnabled = (i == 1 || i == 5);
-        if (i == 1 || i == 5) {
-            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(starTapped:)];
-            [star addGestureRecognizer:tap];
-        }
+        star.userInteractionEnabled = NO; // purely visual
         [self.canvasView addSubview:star];
     }
 
-    UILabel *hardLabel = [[UILabel alloc] initWithFrame:CGRectMake(395.0f, benchY + benchH - 36.0f, 30.0f, 30.0f)];
+    UILabel *hardLabel = [[UILabel alloc] initWithFrame:CGRectMake(395.0f, diffRowY, 30.0f, 30.0f)];
     hardLabel.text = @"难";
     hardLabel.font = [UIFont systemFontOfSize:18.0f];
     hardLabel.textColor = self.isShuffled ? [self primaryColor] : [self onSurfaceVariantColor];
     hardLabel.textAlignment = NSTextAlignmentCenter;
+    hardLabel.userInteractionEnabled = NO;
     hardLabel.tag = 202;
     [self.canvasView addSubview:hardLabel];
+
+    // BUG 1 FIX: Use invisible UIButton overlays for touch targets.
+    // UILabel+UITapGestureRecognizer fails on iOS 9 when UIPanGestureRecognizers exist
+    // on sibling views. UIButton UIControlEventTouchUpInside uses the UIControl touch
+    // tracking path (same as SquishyButton) which is not affected by this iOS 9 bug.
+    // "Easy" touch target — covers 易 label + star 1 zone
+    UIButton *easyBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    easyBtn.frame = CGRectMake(175.0f, diffRowY - 4.0f, 80.0f, 44.0f);
+    easyBtn.backgroundColor = [UIColor clearColor];
+    easyBtn.tag = 401; // easy mode
+    [easyBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.canvasView addSubview:easyBtn];
+
+    // "Hard" touch target — covers star 5 + 难 label zone
+    UIButton *hardBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    hardBtn.frame = CGRectMake(330.0f, diffRowY - 4.0f, 100.0f, 44.0f);
+    hardBtn.backgroundColor = [UIColor clearColor];
+    hardBtn.tag = 402; // hard mode
+    [hardBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.canvasView addSubview:hardBtn];
 
     [self updateStarsDisplay];
 }
@@ -253,10 +274,9 @@
     }
 }
 
-- (void)starTapped:(UITapGestureRecognizer *)sender {
-    UILabel *star = (UILabel *)sender.view;
-    NSInteger tag = star.tag - 300;
-    BOOL newShuffled = (tag == 5);
+// BUG 1 FIX: UIButton target-action replaces UITapGestureRecognizer on UILabel.
+- (void)difficultyBtnTapped:(UIButton *)sender {
+    BOOL newShuffled = (sender.tag == 402); // 402 = hard, 401 = easy
     if (newShuffled == self.isShuffled) return;
     self.isShuffled = newShuffled;
 
@@ -271,6 +291,13 @@
 
     // Rebuild cards with new order
     [self rebuildCards];
+
+    // BUG 1 FIX: After rebuildCards, new card views are on top of the invisible
+    // UIButton touch targets. Bring the buttons back to front so touches reach them.
+    UIButton *easyHitBtn = (UIButton *)[self.canvasView viewWithTag:401];
+    UIButton *hardHitBtn = (UIButton *)[self.canvasView viewWithTag:402];
+    if (easyHitBtn) [self.canvasView bringSubviewToFront:easyHitBtn];
+    if (hardHitBtn) [self.canvasView bringSubviewToFront:hardHitBtn];
 
     // Show/hide check button
     SquishyButton *checkBtn = (SquishyButton *)[self.canvasView viewWithTag:100];
@@ -349,12 +376,20 @@
     CGPoint translation = [gesture translationInView:self.canvasView];
 
     if (gesture.state == UIGestureRecognizerStateBegan) {
+        // BUG 2 FIX: Reset transform to identity FIRST before anything else.
+        // If the card was returned to bench with a rotation transform, starting a
+        // new drag while the rotation is active confuses iOS 9 pan gesture tracking.
+        card.transform = CGAffineTransformIdentity;
         [self.canvasView bringSubviewToFront:card];
         card.transform = CGAffineTransformScale(CGAffineTransformIdentity, 1.15f, 1.15f);
 
+        // Remove from slotOccupants (card is being lifted)
         for (NSNumber *slotKey in [self.slotOccupants allKeys]) {
             if (self.slotOccupants[slotKey] == card) {
                 [self.slotOccupants removeObjectForKey:slotKey];
+                // BUG 2 FIX: Also remove from lockedSlots so an un-placed card
+                // doesn't leave a permanently locked-but-empty slot.
+                [self.lockedSlots removeObject:slotKey];
                 break;
             }
         }
@@ -427,13 +462,25 @@
 
 - (void)sendCardBackToBench:(UIButton *)card {
     NSInteger cardIndex = card.tag - 1;
+    if (cardIndex < 0 || cardIndex >= (NSInteger)self.benchCenters.count) return;
     CGPoint benchCenter = [self.benchCenters[cardIndex] CGPointValue];
     CGFloat rotation = ((float)rand() / RAND_MAX) * 10.0f - 5.0f;
 
-    [UIView animateWithDuration:0.25f delay:0.0f options:UIViewAnimationOptionCurveEaseOut animations:^{
+    // BUG 2 FIX: Do NOT animate card.transform inside the animation block.
+    // Animating transform inside UIView animateWithDuration on iOS 9 can leave
+    // the view's user interaction permanently disabled when completion:nil is used.
+    // Fix: animate only center, allow user interaction during animation, and apply
+    // rotation in the completion block so transform state is always clean.
+    [UIView animateWithDuration:0.25f
+                          delay:0.0f
+                        options:UIViewAnimationOptionCurveEaseOut | UIViewAnimationOptionAllowUserInteraction
+                     animations:^{
         card.center = benchCenter;
+        card.transform = CGAffineTransformIdentity;
+    } completion:^(BOOL finished) {
+        // Apply rotation after center animation so it never interferes with pan tracking
         card.transform = CGAffineTransformMakeRotation(rotation * M_PI / 180.0f);
-    } completion:nil];
+    }];
 }
 
 #pragma mark - Verification (Hard Mode)

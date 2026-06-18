@@ -322,20 +322,19 @@
     easyLabel.font = [UIFont systemFontOfSize:20.0f];
     easyLabel.textColor = [self isShuffled] ? [self onSurfaceVariantColor] : [self primaryColor];
     easyLabel.textAlignment = NSTextAlignmentCenter;
+    easyLabel.userInteractionEnabled = NO;
     easyLabel.tag = 201;
     [self.footerView addSubview:easyLabel];
 
-    // 5 stars — UILabel + UITapGestureRecognizer (UIButtonTypeCustom has iOS 9 touch bugs)
+    // 5 stars — purely visual UILabels (no gesture recognizers)
+    // BUG 1 FIX: UILabel+UITapGestureRecognizer fails on iOS 9 when UIPanGestureRecognizers
+    // exist on sibling views. Stars are visual-only; invisible UIButton overlays handle taps.
     for (NSInteger i = 1; i <= 5; i++) {
         UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 32.0f, 72.0f, 30.0f, 36.0f)];
         star.tag = 300 + i;
         star.textAlignment = NSTextAlignmentCenter;
         star.font = [UIFont systemFontOfSize:22.0f];
-        star.userInteractionEnabled = (i == 1 || i == 5);
-        if (i == 1 || i == 5) {
-            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(starTapped:)];
-            [star addGestureRecognizer:tap];
-        }
+        star.userInteractionEnabled = NO; // purely visual
         [self.footerView addSubview:star];
     }
 
@@ -345,8 +344,24 @@
     hardLabel.font = [UIFont systemFontOfSize:20.0f];
     hardLabel.textColor = [self isShuffled] ? [self primaryColor] : [self onSurfaceVariantColor];
     hardLabel.textAlignment = NSTextAlignmentCenter;
+    hardLabel.userInteractionEnabled = NO;
     hardLabel.tag = 202;
     [self.footerView addSubview:hardLabel];
+
+    // Invisible UIButton touch targets — reliable UIControlEventTouchUpInside on iOS 9
+    UIButton *easyBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    easyBtn.frame = CGRectMake(175.0f, 68.0f, 80.0f, 44.0f);
+    easyBtn.backgroundColor = [UIColor clearColor];
+    easyBtn.tag = 401;
+    [easyBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.footerView addSubview:easyBtn];
+
+    UIButton *hardBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    hardBtn.frame = CGRectMake(330.0f, 68.0f, 100.0f, 44.0f);
+    hardBtn.backgroundColor = [UIColor clearColor];
+    hardBtn.tag = 402;
+    [hardBtn addTarget:self action:@selector(difficultyBtnTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.footerView addSubview:hardBtn];
 
     [self updateStarsDisplay];
 
@@ -461,11 +476,11 @@
     [self performSelector:@selector(playStrokeAnimation) withObject:nil afterDelay:0.3f];
 }
 
-- (void)starTapped:(UITapGestureRecognizer *)sender {
-    UILabel *star = (UILabel *)sender.view;
-    NSInteger tag = star.tag - 300; // 1 or 5
+// BUG 1 FIX: UIButton target-action replaces UITapGestureRecognizer on UILabel.
+- (void)difficultyBtnTapped:(UIButton *)sender {
+    NSInteger tag = sender.tag; // 401 = easy, 402 = hard
 
-    BOOL newShuffled = (tag == 5);
+    BOOL newShuffled = (tag == 402);
     if (newShuffled == self.isShuffled) return; // no change
 
     self.isShuffled = newShuffled;
