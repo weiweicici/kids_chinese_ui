@@ -1,0 +1,417 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A5B5B746B16CC9B8C1592E4 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EABE11B71F284D01F9BA3990 /* AppDelegate.m */; };
+		1AD2483F3537346C14C6BA0B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 654BA9386B194475008768BC /* main.m */; };
+		1F79F8A071A76961A3B3E725 /* Game2ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E9010DB17D3946141921E0CE /* Game2ViewController.m */; };
+		3294C8C62D37EAB2DB974877 /* Textbooks in Resources */ = {isa = PBXBuildFile; fileRef = 5966926F1E12D0D63649A24E /* Textbooks */; };
+		3D6435A564D90F720BB4C705 /* SquishyButton.m in Sources */ = {isa = PBXBuildFile; fileRef = C12DBE6BAEDEBC49082F0F51 /* SquishyButton.m */; };
+		4B4499D40CBB7AD7AD9A491D /* TextbookManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E524670D44F0E42418F3F1BA /* TextbookManager.m */; };
+		53D1C23AC3C071F91DBB87AE /* Game1ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B212323C528C2EDCDCAB1046 /* Game1ViewController.m */; };
+		5ABFAE5B4CF2C645922C6397 /* AudioManager.m in Sources */ = {isa = PBXBuildFile; fileRef = C75DE51E1301C11E45066EAE /* AudioManager.m */; };
+		6B8135BE934D8AA5FC1C8109 /* ChineseWordmp3 in Resources */ = {isa = PBXBuildFile; fileRef = 634D0A97E9F47BD7B29B8F48 /* ChineseWordmp3 */; };
+		7A3BBFB2ECF7E6BC6BE4E5AE /* WordModel.m in Sources */ = {isa = PBXBuildFile; fileRef = E0C9F3177F5D7BFFD180D262 /* WordModel.m */; };
+		7AC1E3982F10186BCE1EA8C0 /* AppNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6054413044B95185145FFF9F /* AppNavigationController.m */; };
+		8798DE88E353CCFBAE1F6CB2 /* MainScreenViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F5B8B6604559807CD5640305 /* MainScreenViewController.m */; };
+		8A06134DB7BC2FB1124AFD83 /* GifPlayerView.m in Sources */ = {isa = PBXBuildFile; fileRef = BABCC8893A0B84E6D2ABCC26 /* GifPlayerView.m */; };
+		93B796A567D2F342B57DD8C3 /* LessonModel.m in Sources */ = {isa = PBXBuildFile; fileRef = B9789DBB4CD0BB01DB16BBBE /* LessonModel.m */; };
+		E0DB9C8A709A7BE8AE986C1D /* FlashcardViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C86E689A8532EE89D4F6B510 /* FlashcardViewController.m */; };
+		FAB36CEDEC6F1855AD9A7121 /* BaseViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E4190DEEF20A98CA8E1E315 /* BaseViewController.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1BA5938A05C350AB559118C2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1E4190DEEF20A98CA8E1E315 /* BaseViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BaseViewController.m; sourceTree = "<group>"; };
+		275921CE9A84FE72068C8BF0 /* WordModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WordModel.h; sourceTree = "<group>"; };
+		348C2727059ECABEFAEC3EC8 /* AudioManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioManager.h; sourceTree = "<group>"; };
+		3DED7DA43C907B33F92E2B46 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		5966926F1E12D0D63649A24E /* Textbooks */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Textbooks; sourceTree = SOURCE_ROOT; };
+		6054413044B95185145FFF9F /* AppNavigationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppNavigationController.m; sourceTree = "<group>"; };
+		629B9584B220AE826B681692 /* MainScreenViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainScreenViewController.h; sourceTree = "<group>"; };
+		634D0A97E9F47BD7B29B8F48 /* ChineseWordmp3 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ChineseWordmp3; sourceTree = SOURCE_ROOT; };
+		654BA9386B194475008768BC /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		6CC3EC356EF8D3A619249192 /* FlashcardViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FlashcardViewController.h; sourceTree = "<group>"; };
+		6CF458DC370A798EC84E84D6 /* BaseViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BaseViewController.h; sourceTree = "<group>"; };
+		733CB4EFBA3F6C4C4F2B99DB /* GifPlayerView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GifPlayerView.h; sourceTree = "<group>"; };
+		763F8C74F3A2D0B2E010B41E /* Game1ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Game1ViewController.h; sourceTree = "<group>"; };
+		A42B38B7667E26035E1D2F12 /* ChineseApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChineseApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B212323C528C2EDCDCAB1046 /* Game1ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Game1ViewController.m; sourceTree = "<group>"; };
+		B9789DBB4CD0BB01DB16BBBE /* LessonModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LessonModel.m; sourceTree = "<group>"; };
+		BABCC8893A0B84E6D2ABCC26 /* GifPlayerView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GifPlayerView.m; sourceTree = "<group>"; };
+		BE2EB20C9F8E646AEDC4CF21 /* AppNavigationController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppNavigationController.h; sourceTree = "<group>"; };
+		C12DBE6BAEDEBC49082F0F51 /* SquishyButton.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SquishyButton.m; sourceTree = "<group>"; };
+		C75DE51E1301C11E45066EAE /* AudioManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioManager.m; sourceTree = "<group>"; };
+		C86E689A8532EE89D4F6B510 /* FlashcardViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FlashcardViewController.m; sourceTree = "<group>"; };
+		D3FA582D66DCD8B6763AECFB /* TextbookManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TextbookManager.h; sourceTree = "<group>"; };
+		D49C3D500D50549E1348EBB3 /* LessonModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LessonModel.h; sourceTree = "<group>"; };
+		D915D8FB2F40284E1AAB0219 /* SquishyButton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SquishyButton.h; sourceTree = "<group>"; };
+		E0C9F3177F5D7BFFD180D262 /* WordModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WordModel.m; sourceTree = "<group>"; };
+		E524670D44F0E42418F3F1BA /* TextbookManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TextbookManager.m; sourceTree = "<group>"; };
+		E9010DB17D3946141921E0CE /* Game2ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Game2ViewController.m; sourceTree = "<group>"; };
+		EABE11B71F284D01F9BA3990 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		F5B8B6604559807CD5640305 /* MainScreenViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MainScreenViewController.m; sourceTree = "<group>"; };
+		F85B610D8F927868AC951C5E /* Game2ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Game2ViewController.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		04D7E6699D58C69991CF9CC4 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				3DED7DA43C907B33F92E2B46 /* AppDelegate.h */,
+				EABE11B71F284D01F9BA3990 /* AppDelegate.m */,
+				1BA5938A05C350AB559118C2 /* Info.plist */,
+				654BA9386B194475008768BC /* main.m */,
+				6C29038D3044EBD17877FCEF /* Controllers */,
+				F856AE1DDD8C4323BF5BB529 /* Core */,
+				6BFA55405B4149322C96D882 /* Models */,
+				0597EA77E93C6AFF51FCA8B4 /* Views */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		0597EA77E93C6AFF51FCA8B4 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D915D8FB2F40284E1AAB0219 /* SquishyButton.h */,
+				C12DBE6BAEDEBC49082F0F51 /* SquishyButton.m */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		61FB71DEA1666B893E57DE7C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A42B38B7667E26035E1D2F12 /* ChineseApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6BFA55405B4149322C96D882 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D49C3D500D50549E1348EBB3 /* LessonModel.h */,
+				B9789DBB4CD0BB01DB16BBBE /* LessonModel.m */,
+				D3FA582D66DCD8B6763AECFB /* TextbookManager.h */,
+				E524670D44F0E42418F3F1BA /* TextbookManager.m */,
+				275921CE9A84FE72068C8BF0 /* WordModel.h */,
+				E0C9F3177F5D7BFFD180D262 /* WordModel.m */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		6C29038D3044EBD17877FCEF /* Controllers */ = {
+			isa = PBXGroup;
+			children = (
+				6CF458DC370A798EC84E84D6 /* BaseViewController.h */,
+				1E4190DEEF20A98CA8E1E315 /* BaseViewController.m */,
+				6CC3EC356EF8D3A619249192 /* FlashcardViewController.h */,
+				C86E689A8532EE89D4F6B510 /* FlashcardViewController.m */,
+				763F8C74F3A2D0B2E010B41E /* Game1ViewController.h */,
+				B212323C528C2EDCDCAB1046 /* Game1ViewController.m */,
+				F85B610D8F927868AC951C5E /* Game2ViewController.h */,
+				E9010DB17D3946141921E0CE /* Game2ViewController.m */,
+				629B9584B220AE826B681692 /* MainScreenViewController.h */,
+				F5B8B6604559807CD5640305 /* MainScreenViewController.m */,
+			);
+			path = Controllers;
+			sourceTree = "<group>";
+		};
+		B53A5799CB236299B5820EE7 = {
+			isa = PBXGroup;
+			children = (
+				634D0A97E9F47BD7B29B8F48 /* ChineseWordmp3 */,
+				5966926F1E12D0D63649A24E /* Textbooks */,
+				04D7E6699D58C69991CF9CC4 /* src */,
+				61FB71DEA1666B893E57DE7C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F856AE1DDD8C4323BF5BB529 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				BE2EB20C9F8E646AEDC4CF21 /* AppNavigationController.h */,
+				6054413044B95185145FFF9F /* AppNavigationController.m */,
+				348C2727059ECABEFAEC3EC8 /* AudioManager.h */,
+				C75DE51E1301C11E45066EAE /* AudioManager.m */,
+				733CB4EFBA3F6C4C4F2B99DB /* GifPlayerView.h */,
+				BABCC8893A0B84E6D2ABCC26 /* GifPlayerView.m */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B1C9D3570B52B1C51B8873CE /* ChineseApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B807FFF385E53E02B21B1447 /* Build configuration list for PBXNativeTarget "ChineseApp" */;
+			buildPhases = (
+				274F43E30E320DE7B9008AAD /* Sources */,
+				2768A8E3CED5EE18E07A1E04 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChineseApp;
+			packageProductDependencies = (
+			);
+			productName = ChineseApp;
+			productReference = A42B38B7667E26035E1D2F12 /* ChineseApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0FCE18A7D7D610D2D51A5449 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 3D5957C8215722D34EEF0615 /* Build configuration list for PBXProject "ChineseApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B53A5799CB236299B5820EE7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 61FB71DEA1666B893E57DE7C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B1C9D3570B52B1C51B8873CE /* ChineseApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2768A8E3CED5EE18E07A1E04 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B8135BE934D8AA5FC1C8109 /* ChineseWordmp3 in Resources */,
+				3294C8C62D37EAB2DB974877 /* Textbooks in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		274F43E30E320DE7B9008AAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A5B5B746B16CC9B8C1592E4 /* AppDelegate.m in Sources */,
+				7AC1E3982F10186BCE1EA8C0 /* AppNavigationController.m in Sources */,
+				5ABFAE5B4CF2C645922C6397 /* AudioManager.m in Sources */,
+				FAB36CEDEC6F1855AD9A7121 /* BaseViewController.m in Sources */,
+				E0DB9C8A709A7BE8AE986C1D /* FlashcardViewController.m in Sources */,
+				53D1C23AC3C071F91DBB87AE /* Game1ViewController.m in Sources */,
+				1F79F8A071A76961A3B3E725 /* Game2ViewController.m in Sources */,
+				8A06134DB7BC2FB1124AFD83 /* GifPlayerView.m in Sources */,
+				93B796A567D2F342B57DD8C3 /* LessonModel.m in Sources */,
+				8798DE88E353CCFBAE1F6CB2 /* MainScreenViewController.m in Sources */,
+				3D6435A564D90F720BB4C705 /* SquishyButton.m in Sources */,
+				4B4499D40CBB7AD7AD9A491D /* TextbookManager.m in Sources */,
+				7A3BBFB2ECF7E6BC6BE4E5AE /* WordModel.m in Sources */,
+				1AD2483F3537346C14C6BA0B /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A6BEB446E329245AC055398 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "armv7 arm64";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = src/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kids.ChineseApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = Debug;
+		};
+		520A752FA4ED72D1B955DB0A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A7125D7983E4D5E8882B5B64 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "armv7 arm64";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = src/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kids.ChineseApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = Release;
+		};
+		B351C5B91E8784C4FD69F051 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3D5957C8215722D34EEF0615 /* Build configuration list for PBXProject "ChineseApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				520A752FA4ED72D1B955DB0A /* Debug */,
+				B351C5B91E8784C4FD69F051 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B807FFF385E53E02B21B1447 /* Build configuration list for PBXNativeTarget "ChineseApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A6BEB446E329245AC055398 /* Debug */,
+				A7125D7983E4D5E8882B5B64 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0FCE18A7D7D610D2D51A5449 /* Project object */;
+}

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>帮我找位置 (Help Me Find the Position) - Hanzi Quest</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Plus Jakarta Sans for UI, Noto Serif for Characters -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary": "#8f4e00",
+                        "on-tertiary-fixed-variant": "#004883",
+                        "primary-fixed": "#97f4da",
+                        "background": "#f9fcfb", // Soft off-white override for this specific game
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#eef5f2",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#66c2aa", // Mint
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d4dcd9",
+                        "tertiary-fixed-dim": "#a4c9ff",
+                        "on-surface-variant": "#3e4945",
+                        "on-primary-fixed": "#002019",
+                        "primary": "#006b58",
+                        "surface": "#f4fbf8",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#e8efec",
+                        "on-primary-container": "#004e40",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#006b58",
+                        "primary-fixed-dim": "#7bd7be",
+                        "tertiary": "#0060ac",
+                        "surface-container-highest": "#dde4e1",
+                        "inverse-primary": "#7bd7be",
+                        "on-secondary-container": "#6b3900",
+                        "surface-bright": "#f4fbf8",
+                        "on-tertiary-fixed": "#001c39",
+                        "outline": "#6e7a75",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#d4e3ff",
+                        "on-tertiary-container": "#00457e",
+                        "on-primary-fixed-variant": "#005142",
+                        "outline-variant": "#bdc9c4",
+                        "tertiary-container": "#7bb4ff",
+                        "surface-variant": "#dde4e1",
+                        "surface-container-high": "#e3eae7",
+                        "secondary-fixed-dim": "#ffb77a",
+                        "inverse-on-surface": "#ebf2ef",
+                        "on-background": "#161d1b",
+                        "on-secondary-fixed-variant": "#6d3a00",
+                        "inverse-surface": "#2b3230",
+                        "on-surface": "#161d1b",
+                        "secondary-container": "#fc9d41",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#2e1500",
+                        "secondary-fixed": "#ffdcc2"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem", // Added for card radius
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "stack-lg": "32px",
+                        "margin-page": "40px",
+                        "gutter-grid": "24px",
+                        "stack-md": "16px",
+                        "stack-sm": "8px"
+                    },
+                    fontFamily: {
+                        "label-bold": ["Plus Jakarta Sans"],
+                        "display-character": ["Noto Serif"],
+                        "card-character": ["Noto Serif"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    fontSize: {
+                        "label-bold": ["16px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "display-character": ["120px", { "lineHeight": "140px", "fontWeight": "500" }],
+                        "card-character": ["64px", { "lineHeight": "80px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "800" }],
+                        "body-md": ["18px", { "lineHeight": "26px", "fontWeight": "500" }],
+                        "body-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "700" }]
+                    },
+                    boxShadow: {
+                        'ambient': '0 8px 24px -4px rgba(0, 107, 88, 0.1)',
+                        'pressable': 'inset 0 -3px 0 0 rgba(0, 78, 64, 0.4)',
+                        'pressable-active': 'inset 0 0 0 0 rgba(0, 78, 64, 0.4)'
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom styles to enforce the 4:3 iPad ratio and soft tactile feel */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #2b3230; /* Darker backdrop to frame the iPad area on larger screens */
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling, true app feel */
+        }
+
+        #app-container {
+            width: 1024px;
+            height: 768px;
+            background-color: #f9fcfb; /* The requested soft off-white */
+            position: relative;
+            overflow: hidden;
+            /* Scale down nicely on smaller screens while maintaining aspect ratio */
+            max-width: 100vw;
+            max-height: calc(100vw * 0.75);
+        }
+
+        @media (max-width: 1024px) {
+            #app-container {
+                width: 100vw;
+                height: calc(100vw * 0.75);
+            }
+        }
+
+        /* Tactile Button Press Animation */
+        .btn-tactile {
+            transition: all 0.1s ease;
+        }
+        .btn-tactile:active {
+            transform: translateY(3px);
+            box-shadow: inset 0 0 0 0 rgba(0, 78, 64, 0.4) !important; /* Flatten the squish */
+        }
+
+        /* Draggable Card Styling */
+        .character-card {
+            background-color: #e1fbee; /* Pastel green from prompt */
+            box-shadow: 0 4px 12px rgba(0, 107, 88, 0.08); /* Ambient shadow */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: grab;
+            user-select: none;
+            touch-action: none; /* Prevent scrolling when dragging */
+        }
+        .character-card:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            box-shadow: 0 12px 24px rgba(0, 107, 88, 0.15);
+            z-index: 50;
+        }
+
+        /* Grid Slot Styling */
+        .grid-slot {
+            background-color: #70cfc2; /* Light teal from prompt */
+            border: 2px dashed rgba(255, 255, 255, 0.5); /* Soft boundary */
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased font-body-md">
+<!-- Main iPad Container -->
+<div class="rounded-none md:rounded-[32px] md:shadow-2xl flex flex-col relative" id="app-container">
+<!-- TopAppBar (Customized for Game Header) -->
+<!-- Follows Brand Anchors: TopAppBar but suppressed full nav since it's a specific task page -->
+<header class="w-full h-[80px] px-margin-page flex justify-between items-center bg-transparent z-10 shrink-0">
+<h1 class="font-headline-lg text-headline-lg text-on-surface-variant">帮我找位置</h1>
+<div class="flex gap-stack-md">
+<button class="btn-tactile bg-primary-container text-on-primary font-label-bold text-label-bold px-6 py-3 rounded-full shadow-pressable flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    开始
+                </button>
+<button class="btn-tactile bg-surface-container-highest text-on-surface font-label-bold text-label-bold px-6 py-3 rounded-full shadow-[inset_0_-3px_0_0_rgba(200,200,200,0.4)] flex items-center gap-2">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+                    返回
+                </button>
+</div>
+</header>
+<!-- Game Area Canvas -->
+<main class="flex-1 flex flex-col px-margin-page pb-stack-lg gap-stack-lg relative overflow-hidden">
+<!-- Upper Area: 4x4 Grid -->
+<!-- The Learning Grid: 4x4 grid with 24px gutter -->
+<div class="flex-1 flex justify-center items-center mt-4">
+<div class="grid grid-cols-4 grid-rows-4 gap-gutter-grid w-[480px] h-[480px]">
+<!-- Generate 16 slots -->
+<script>
+                        for(let i=1; i<=16; i++) {
+                            document.write(`
+                                <div class="grid-slot rounded-2xl flex justify-center items-center relative overflow-hidden">
+                                    <span class="font-headline-lg text-headline-lg text-white opacity-40 select-none">${i}</span>
+                                </div>
+                            `);
+                        }
+                    </script>
+</div>
+</div>
+<!-- Lower Area: Bench for Draggable Cards -->
+<div class="h-[180px] bg-surface-container-low rounded-[24px] p-stack-md flex flex-wrap justify-center items-center gap-4 relative shadow-inner">
+<!-- 16 Chinese Characters -->
+<script>
+                    const characters = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '百', '千', '个', '人', '小', '大'];
+                    // Shuffle characters for disordered look
+                    characters.sort(() => Math.random() - 0.5);
+                    
+                    characters.forEach(char => {
+                        // Adding random slight rotations for a playful, disordered feel
+                        const rotation = (Math.random() * 10) - 5;
+                        document.write(`
+                            <div class="character-card w-[60px] h-[60px] rounded-[16px] flex justify-center items-center font-card-character text-[40px] text-on-background relative"
+                                 style="transform: rotate(${rotation}deg);">
+                                ${char}
+                            </div>
+                        `);
+                    });
+                </script>
+</div>
+<!-- Bottom Status: Ratings -->
+<div class="h-[60px] flex justify-between items-end px-stack-md shrink-0">
+<!-- Left Rating (1 yellow, 4 grey) -->
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-outline-variant" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-outline-variant" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-outline-variant" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-outline-variant" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+</div>
+<!-- Right Rating (5 yellow) -->
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+<span class="material-symbols-outlined text-[#fc9d41]" style="font-variation-settings: 'FILL' 1; font-size: 32px;">star</span>
+</div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<!-- Initial state: hidden. Using inline styles for demonstration, but typically controlled via JS -->
+<div class="absolute inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm hidden" id="confirmation-modal">
+<!-- Modal Box -->
+<div class="bg-surface-container-lowest w-[400px] rounded-[32px] p-stack-lg flex flex-col items-center text-center shadow-2xl transform scale-100 transition-transform">
+<div class="w-20 h-20 bg-tertiary-container rounded-full flex items-center justify-center mb-6 shadow-ambient">
+<span class="material-symbols-outlined text-on-tertiary-container" style="font-size: 40px;">help_outline</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">提示</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-8">是不是确定排好顺序了？</p>
+<div class="flex w-full gap-stack-md justify-center">
+<!-- Left Blue Button -->
+<button class="btn-tactile flex-1 bg-tertiary-fixed text-on-tertiary-fixed font-label-bold text-label-bold py-4 rounded-full shadow-[inset_0_-3px_0_0_rgba(0,69,126,0.2)]" onclick="document.getElementById('confirmation-modal').classList.add('hidden')">
+                        不是
+                    </button>
+<!-- Right Blue Button -->
+<button class="btn-tactile flex-1 bg-tertiary text-on-tertiary font-label-bold text-label-bold py-4 rounded-full shadow-[inset_0_-3px_0_0_rgba(0,28,57,0.4)]" onclick="document.getElementById('confirmation-modal').classList.add('hidden')">
+                        是的
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Simple JS to demonstrate modal toggle (for preview purposes) -->
+<script>
+        // Attach to the "Start" or "Check" action to show modal
+        // For this demo, clicking anywhere empty on the bench shows the modal
+        document.querySelector('.bg-surface-container-low').addEventListener('dblclick', function(e) {
+            if(e.target === this) {
+                document.getElementById('confirmation-modal').classList.remove('hidden');
+            }
+        });
+        
+        // Basic drag implementation concept (visual only for static HTML)
+        const cards = document.querySelectorAll('.character-card');
+        cards.forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(1.1) rotate(0deg)';
+                card.style.zIndex = '100';
+            });
+            window.addEventListener('mouseup', () => {
+                const rotation = (Math.random() * 10) - 5;
+                card.style.transform = `scale(1) rotate(${rotation}deg)`;
+                card.style.zIndex = '1';
+            });
+        });
+    </script>
+</body></html>

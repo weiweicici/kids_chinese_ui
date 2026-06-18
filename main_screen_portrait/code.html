@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kids Chinese Learning App</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;family=Noto+Serif:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-container": "#00457e",
+                        "surface-container-low": "#eef5f2",
+                        "on-surface-variant": "#3e4945",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fc9d41",
+                        "primary-fixed": "#97f4da",
+                        "secondary-fixed-dim": "#ffb77a",
+                        "on-secondary-container": "#6b3900",
+                        "surface-container-high": "#e3eae7",
+                        "surface-container": "#e8efec",
+                        "on-tertiary-fixed": "#001c39",
+                        "primary-container": "#66c2aa",
+                        "tertiary-fixed": "#d4e3ff",
+                        "secondary": "#8f4e00",
+                        "on-primary-fixed-variant": "#005142",
+                        "on-background": "#161d1b",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#2b3230",
+                        "primary": "#006b58",
+                        "outline": "#6e7a75",
+                        "on-secondary-fixed": "#2e1500",
+                        "on-primary-fixed": "#002019",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#f4fbf8",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#004e40",
+                        "primary-fixed-dim": "#7bd7be",
+                        "inverse-on-surface": "#ebf2ef",
+                        "on-secondary-fixed-variant": "#6d3a00",
+                        "surface-variant": "#dde4e1",
+                        "tertiary-container": "#7bb4ff",
+                        "surface-tint": "#006b58",
+                        "tertiary-fixed-dim": "#a4c9ff",
+                        "outline-variant": "#bdc9c4",
+                        "surface": "#f4fbf8",
+                        "inverse-primary": "#7bd7be",
+                        "tertiary": "#0060ac",
+                        "on-tertiary-fixed-variant": "#004883",
+                        "on-surface": "#161d1b",
+                        "surface-dim": "#d4dcd9",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f4fbf8",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#dde4e1",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#ffdcc2"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "margin-page": "24px",
+                        "gutter-grid": "16px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px",
+                        "stack-lg": "32px"
+                    },
+                    fontFamily: {
+                        "label-bold": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display-character": ["Noto Serif"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "card-character": ["Noto Serif"]
+                    },
+                    fontSize: {
+                        "label-bold": ["14px", { lineHeight: "18px", letterSpacing: "0.02em", fontWeight: "700" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "500" }],
+                        "headline-lg": ["28px", { lineHeight: "36px", fontWeight: "800" }],
+                        "display-character": ["100px", { lineHeight: "120px", fontWeight: "500" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "700" }],
+                        "body-lg": ["18px", { lineHeight: "26px", fontWeight: "600" }],
+                        "card-character": ["48px", { lineHeight: "64px", fontWeight: "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .squishy-btn {
+            box-shadow: 0 4px 0 0 #005142;
+            transition: all 0.1s ease;
+        }
+        .squishy-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 0 #005142;
+        }
+        .card-shadow {
+            box-shadow: 0 8px 24px -4px rgba(0, 107, 88, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-hidden antialiased max-w-[768px] mx-auto relative border-x border-surface-variant">
+<!-- TopNavBar -->
+<nav class="absolute top-0 w-full h-[72px] bg-surface/80 backdrop-blur-md z-50 flex justify-between items-center px-margin-page bg-surface-container-low/50 border-b border-surface-variant">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight whitespace-nowrap">第一册 第一课</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container text-on-primary-container font-label-bold text-label-bold px-4 py-2 rounded-full hover:bg-primary-fixed-dim transition-colors squishy-btn whitespace-nowrap">章节目录</button>
+<button class="bg-primary-container text-on-primary-container font-label-bold text-label-bold px-4 py-2 rounded-full hover:bg-primary-fixed-dim transition-colors squishy-btn whitespace-nowrap">全文跟读</button>
+<button class="bg-primary-container text-on-primary-container font-label-bold text-label-bold px-4 py-2 rounded-full hover:bg-primary-fixed-dim transition-colors squishy-btn whitespace-nowrap">全文朗读</button>
+<button class="w-10 h-10 rounded-full hover:bg-primary-container/20 transition-colors flex items-center justify-center text-primary ml-1">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-[88px] pb-[100px] px-margin-page h-[1024px] flex flex-col items-center justify-center relative overflow-y-auto">
+<!-- Grid Container -->
+<div class="grid grid-cols-4 gap-gutter-grid w-full z-10 relative mb-8">
+<!-- Character Cards -->
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">yī</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">一</span>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">èr</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">二</span>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">sān</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">三</span>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">sì</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">四</span>
+</div>
+<!-- Card 5 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">wǔ</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">五</span>
+</div>
+<!-- Card 6 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">liù</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">六</span>
+</div>
+<!-- Card 7 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">qī</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">七</span>
+</div>
+<!-- Card 8 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">bā</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">八</span>
+</div>
+<!-- Card 9 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">jiǔ</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">九</span>
+</div>
+<!-- Card 10 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">shí</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">十</span>
+</div>
+<!-- Card 11 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">bǎi</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">百</span>
+</div>
+<!-- Card 12 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">qiān</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">千</span>
+</div>
+<!-- Card 13 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group border-primary-container scale-105 z-10">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">gè</span>
+<span class="font-card-character text-card-character text-primary">个</span>
+<div class="absolute top-2 right-2 w-5 h-5 bg-primary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xs" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<!-- Card 14 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">rén</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">人</span>
+</div>
+<!-- Card 15 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">xiǎo</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">小</span>
+</div>
+<!-- Card 16 -->
+<div class="bg-surface-container-lowest rounded-[1rem] aspect-square flex flex-col items-center justify-center relative card-shadow hover:scale-105 transition-transform cursor-pointer border-2 border-transparent hover:border-primary-container group">
+<span class="text-surface-variant font-label-bold text-xs absolute top-2">dà</span>
+<span class="font-card-character text-card-character text-on-surface group-hover:text-primary transition-colors">大</span>
+</div>
+</div>
+<!-- Mascot Placeholder -->
+<div class="absolute bottom-20 right-4 w-40 h-52 z-20 pointer-events-none drop-shadow-2xl">
+<img class="w-full h-full object-contain filter drop-shadow-lg" data-alt="A highly detailed, 3D rendered cartoon character resembling a cheerful yellow sponge, styled with soft, tactile textures suitable for a premium children's educational app. The character is standing playfully, smiling warmly, lit by soft, bright studio lighting against a clean background, embodying a joyful, engaging 'Playful Zen' aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxmemK4q0jtIbnXwd_ZnSBGOzhrUHy3TKCoKv83E2PFxqBmCewrVA-tufXciTwRLhxiEA99E33rnSyl9SPjV7R4kFlJ0f1JObTBmPlFpNQD7yy2rs-U_ibmRaihTOQ-FRBSEJ8wh75wGKSylUej2PrUI7ltEBvoFBLiR3Fpqw2v5j6Ce-m_DB0BfHMZmTA_ozfFhSS696RDUaid2oE_rqMbmmZ4AhnomXTyA9j52Ou9z_axS7Vp7ry2cVwOWcCaRL2JLHaU6Az6F8"/>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="absolute bottom-0 w-full h-[80px] z-50 bg-surface-container-lowest shadow-[0_-4px_20px_0_rgba(0,107,88,0.05)] flex justify-between items-center px-4 md:px-margin-page border-t border-surface-variant">
+<div class="flex items-center gap-1 sm:gap-4 w-full justify-between pr-4">
+<!-- Active Tab -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 sm:px-4 py-2 border-b-[3px] border-on-primary-fixed-variant translate-y-[2px] transition-transform duration-100 hover:bg-primary-fixed-dim/30">
+<span class="material-symbols-outlined mb-0.5 text-[20px]" style="font-variation-settings: 'FILL' 1;">extension</span>
+<span class="font-label-bold text-[12px] sm:text-label-bold whitespace-nowrap">拼字游戏</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 sm:px-4 py-2 rounded-xl transition-all hover:bg-primary-fixed-dim/30 hover:text-primary">
+<span class="material-symbols-outlined mb-0.5 text-[20px]">search</span>
+<span class="font-label-bold text-[12px] sm:text-label-bold whitespace-nowrap">找字游戏</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 sm:px-4 py-2 rounded-xl transition-all hover:bg-primary-fixed-dim/30 hover:text-primary">
+<span class="material-symbols-outlined mb-0.5 text-[20px]">directions_run</span>
+<span class="font-label-bold text-[12px] sm:text-label-bold whitespace-nowrap">跳字游戏</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 sm:px-4 py-2 rounded-xl transition-all hover:bg-primary-fixed-dim/30 hover:text-primary">
+<span class="material-symbols-outlined mb-0.5 text-[20px]">visibility</span>
+<span class="font-label-bold text-[12px] sm:text-label-bold whitespace-nowrap">认读游戏</span>
+</button>
+</div>
+<!-- Trailing Action -->
+<div class="w-12 h-12 shrink-0 bg-secondary-container rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer border-2 border-surface-container-lowest ml-2">
+<span class="text-xl">🏆</span>
+</div>
+</nav>
+</body></html>
