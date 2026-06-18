@@ -201,7 +201,7 @@
         [self.cards addObject:card];
     }
 
-    // 5. Difficulty selector
+    // 5. Difficulty selector — added LAST so always on top in z-order
     UILabel *easyLabel = [[UILabel alloc] initWithFrame:CGRectMake(180.0f, benchY + benchH - 36.0f, 30.0f, 30.0f)];
     easyLabel.text = @"易";
     easyLabel.font = [UIFont systemFontOfSize:18.0f];
@@ -211,14 +211,15 @@
     [self.canvasView addSubview:easyLabel];
 
     for (NSInteger i = 1; i <= 5; i++) {
-        UIButton *star = [UIButton buttonWithType:UIButtonTypeCustom];
-        star.frame = CGRectMake(215.0f + (i - 1) * 30.0f, benchY + benchH - 36.0f, 28.0f, 30.0f);
+        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 30.0f, benchY + benchH - 36.0f, 30.0f, 36.0f)];
         star.tag = 300 + i;
-        star.titleLabel.font = [UIFont systemFontOfSize:20.0f];
+        star.textAlignment = NSTextAlignmentCenter;
+        star.font = [UIFont systemFontOfSize:22.0f];
+        star.textColor = [UIColor clearColor];
+        star.userInteractionEnabled = (i == 1 || i == 5);
         if (i == 1 || i == 5) {
-            [star addTarget:self action:@selector(starTapped:) forControlEvents:UIControlEventTouchUpInside];
-        } else {
-            star.enabled = NO;
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(starTapped:)];
+            [star addGestureRecognizer:tap];
         }
         [self.canvasView addSubview:star];
     }
@@ -236,24 +237,25 @@
 
 - (void)updateStarsDisplay {
     for (NSInteger i = 1; i <= 5; i++) {
-        UIButton *star = [self.canvasView viewWithTag:300 + i];
+        UILabel *star = (UILabel *)[self.canvasView viewWithTag:300 + i];
         if (self.isShuffled) {
-            [star setTitle:@"★" forState:UIControlStateNormal];
-            [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+            star.text = @"★";
+            star.textColor = [self primaryColor];
         } else {
             if (i == 1) {
-                [star setTitle:@"★" forState:UIControlStateNormal];
-                [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+                star.text = @"★";
+                star.textColor = [self primaryColor];
             } else {
-                [star setTitle:@"☆" forState:UIControlStateNormal];
-                [star setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+                star.text = @"☆";
+                star.textColor = [self onSurfaceVariantColor];
             }
         }
     }
 }
 
-- (void)starTapped:(UIButton *)sender {
-    NSInteger tag = sender.tag - 300;
+- (void)starTapped:(UITapGestureRecognizer *)sender {
+    UILabel *star = (UILabel *)sender.view;
+    NSInteger tag = star.tag - 300;
     BOOL newShuffled = (tag == 5);
     if (newShuffled == self.isShuffled) return;
     self.isShuffled = newShuffled;

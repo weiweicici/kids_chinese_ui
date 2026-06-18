@@ -181,6 +181,7 @@
     // 4. Footer toolbar (frame: 0, 904, 768, 120)
     self.footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 904.0f, 768.0f, 120.0f)];
     self.footerView.backgroundColor = [self surfaceContainerColor];
+    self.footerView.clipsToBounds = NO;
     self.footerView.layer.shadowColor = [self primaryColor].CGColor;
     self.footerView.layer.shadowOpacity = 0.08f;
     self.footerView.layer.shadowRadius = 8.0f;
@@ -324,19 +325,17 @@
     easyLabel.tag = 201;
     [self.footerView addSubview:easyLabel];
 
-    // 5 stars
+    // 5 stars — UILabel + UITapGestureRecognizer (UIButtonTypeCustom has iOS 9 touch bugs)
     for (NSInteger i = 1; i <= 5; i++) {
-        UIButton *star = [UIButton buttonWithType:UIButtonTypeCustom];
-        star.frame = CGRectMake(215.0f + (i - 1) * 32.0f, 72.0f, 30.0f, 36.0f);
+        UILabel *star = [[UILabel alloc] initWithFrame:CGRectMake(215.0f + (i - 1) * 32.0f, 72.0f, 30.0f, 36.0f)];
         star.tag = 300 + i;
-        star.titleLabel.font = [UIFont systemFontOfSize:22.0f];
-
+        star.textAlignment = NSTextAlignmentCenter;
+        star.font = [UIFont systemFontOfSize:22.0f];
+        star.userInteractionEnabled = (i == 1 || i == 5);
         if (i == 1 || i == 5) {
-            [star addTarget:self action:@selector(starTapped:) forControlEvents:UIControlEventTouchUpInside];
-        } else {
-            star.enabled = NO;
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(starTapped:)];
+            [star addGestureRecognizer:tap];
         }
-
         [self.footerView addSubview:star];
     }
 
@@ -462,8 +461,9 @@
     [self performSelector:@selector(playStrokeAnimation) withObject:nil afterDelay:0.3f];
 }
 
-- (void)starTapped:(UIButton *)sender {
-    NSInteger tag = sender.tag - 300; // 1 or 5
+- (void)starTapped:(UITapGestureRecognizer *)sender {
+    UILabel *star = (UILabel *)sender.view;
+    NSInteger tag = star.tag - 300; // 1 or 5
 
     BOOL newShuffled = (tag == 5);
     if (newShuffled == self.isShuffled) return; // no change
@@ -490,17 +490,17 @@
 
 - (void)updateStarsDisplay {
     for (NSInteger i = 1; i <= 5; i++) {
-        UIButton *star = [self.footerView viewWithTag:300 + i];
+        UILabel *star = (UILabel *)[self.footerView viewWithTag:300 + i];
         if (self.isShuffled) {
-            [star setTitle:@"★" forState:UIControlStateNormal];
-            [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+            star.text = @"★";
+            star.textColor = [self primaryColor];
         } else {
             if (i == 1) {
-                [star setTitle:@"★" forState:UIControlStateNormal];
-                [star setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+                star.text = @"★";
+                star.textColor = [self primaryColor];
             } else {
-                [star setTitle:@"☆" forState:UIControlStateNormal];
-                [star setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+                star.text = @"☆";
+                star.textColor = [self onSurfaceVariantColor];
             }
         }
     }

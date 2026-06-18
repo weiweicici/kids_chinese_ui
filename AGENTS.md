@@ -78,6 +78,7 @@ python3 deploy.py --logs              # 仅查看日志
 14. **游戏音效**: 删除 AI 生成的 `correct.mp3`/`wrong.mp3`，改为使用原 App 自带的 CAF 文件 (`cuola.caf` 错啦, `nizhenbang.caf` 你真棒)
 15. **难度选择器颜色修复**: `[UIColor lightGrayColor]`（#aaa，不可见）→ `[self onSurfaceVariantColor]`（#3e4945，深灰绿），Game1 + Flashcard 统一修复
 16. **Game1 `starTapped:` 修复**: 不再调用 `buildGameUI` 销毁全部视图（导致 star 按钮无法响应），改为只重建卡片区域（`rebuildCards`）+ 切换检查按钮可见性 + 更新星级
+17. **难度选择器改用 UILabel + UITapGestureRecognizer**: 解决 iOS 9 上 UIButtonTypeCustom 在 transform + clipsToBounds 下无法接收 touch 事件的 bug。两个游戏（Game1 + Flashcard）统一替换，同时 Game1 难度选择器改为在 buildGameUI 中最后创建确保 z-order 最顶层，Flashcard footerView 显式设置 clipsToBounds = NO
 
 ### ❌ 已知问题
 
