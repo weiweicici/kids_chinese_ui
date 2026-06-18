@@ -83,7 +83,7 @@
 3,6,2,院,yuan4,yuan
 3,6,3,整,zheng3,zheng
 3,6,4,齐,qi2,qi
-3,6,5,房,shi2,fang
+3,6,5,房,fang2,fang
 3,6,6,屋,wu1,wu
 3,6,7,清,qing1,qing
 3,6,8,洁,jie2,jie
@@ -160,7 +160,7 @@
 3,10,15,产,chan3,chan
 3,10,16,量,liang4,liang
 3,11,1,爹,die1,die
-3,11,2,您,lin2,nin
+3,11,2,您,nin2,nin
 3,11,3,辛,xin1,xin
 3,11,4,苦,ku3,ku
 3,11,5,累,lei4,lei
@@ -299,7 +299,7 @@
 3,19,10,桥,qiao2,qiao
 3,19,11,斜,xie2,xie
 3,19,12,墙,qiang2,qiang
-3,19,13,混,huen4,hun
+3,19,13,混,hun4,hun
 3,19,14,乱,luan4,luan
 3,19,15,等,deng3,deng
 3,19,16,待,dai4,dai

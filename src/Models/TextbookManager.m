@@ -109,11 +109,11 @@
 - (NSString *)pathForBook:(NSInteger)bookNumber {
     NSString *fileName = nil;
     if (bookNumber == 1) {
-        fileName = @"deepseek_csv_20260615_9c9e07";
+        fileName = @"book1";
     } else if (bookNumber == 2) {
-        fileName = @"deepseek_csv_20260615_84e570";
+        fileName = @"book2";
     } else if (bookNumber == 3) {
-        fileName = @"deepseek_csv_20260615_984b86";
+        fileName = @"book3";
     }
     
     // 1. Try NSBundle

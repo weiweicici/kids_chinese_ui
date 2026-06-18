@@ -117,7 +117,7 @@
 2,8,4,球,qiu2,qiu
 2,8,5,改,gai3,gai
 2,8,6,变,bian4,bian
-2,8,7,方,shi1,fang
+2,8,7,方,fang1,fang
 2,8,8,向,xiang4,xiang
 2,8,9,跑,pao3,pao
 2,8,10,站,zhan4,zhan
@@ -133,7 +133,7 @@
 2,9,4,场,chang3,chang
 2,9,5,不,bu4,bu
 2,9,6,要,yao4,yao
-2,9,7,着,ji2,zhe
+2,9,7,着,zhe5,zhe
 2,9,8,急,ji2,ji
 2,9,9,过,guo4,guo
 2,9,10,去,qu4,qu
