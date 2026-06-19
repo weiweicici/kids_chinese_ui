@@ -42,14 +42,22 @@ python3 deploy.py --logs              # 仅查看日志
 | `ChineseWordmp3/{book}-{lesson}-{wordIdx}.mp3` | 逐字音频（1-1-1.mp3 ~ 3-20-16.mp3） |
 | `ChineseWordmp3/{book}-{lesson}.mp3` | 课文朗读（1-1.mp3） |
 | `ChineseWordmp3/{book}-{lesson}a.mp3` | 跟读音频（1-1a.mp3） |
+| `src/AppDelegate.m` | 启动入口，`HomeScreenViewController` 为 root |
+| `src/AppNavigationController.m/h` | UINavigationController 子类，隐藏导航栏 |
+| `src/Controllers/HomeScreenViewController.m/h` | **新首页** — 两个按钮：识字 / Pinyin |
+| `src/Controllers/MainScreenViewController.m/h` | 识字主界面（4×4 米字格 + 4 个游戏 tab） |
+| `src/Controllers/PinyinMainViewController.m/h` | **拼音模块** — 4×4 汉字网格 + 拼音切换 + 拼音游戏(易/难) |
+| `src/Controllers/FlashcardViewController.m` | 闪卡页 + 认读游戏模式（自动播放 + 难度选择） |
+| `src/Controllers/Game1ViewController.m` | 拼字游戏（米字格网格 + 简易/困难模式 + 纸屑庆祝） |
+| `src/Controllers/Game2ViewController.m` | 跳字游戏（10 个掉落气泡，2-hit per word） |
+| `src/Controllers/Game3ViewController.m` | 找字游戏（4×4 网格，听音选字） |
 | `src/Models/TextbookManager.m` | **plist 解析主入口**（读取 chapter.plist + session_*.plist） |
-| `src/Models/WordModel.m` | `strokeGifName`（支持 plist 覆盖）+ `audioFileName` |
+| `src/Models/WordModel.m` | `strokeGifName`（支持 plist 覆盖）+ `audioFileName` + `pinyinWithTone` |
 | `src/Models/LessonModel.m` | `readAloudAudioFileName` + `readAlongAudioFileName` |
 | `src/Core/AudioManager.m` | 音频播放 + `retiredPlayers` 防崩溃 |
 | `src/Core/GifPlayerView.m` | GIF 播放（UIImage 帧解析） |
-| `src/Controllers/FlashcardViewController.m` | 闪卡页 + 认读游戏模式（自动播放 + 难度选择） |
-| `src/Controllers/Game1ViewController.m` | 拼字游戏（米字格网格 + 简易/困难模式 + 纸屑庆祝） |
 | `src/Views/RiceCellView.h/m` | 米字格虚线单元格视图（主屏幕 + Game1 共用） |
+| `src/Views/SquishyButton.h/m` | 圆角阴影按钮组件 |
 | `compile.py` | 构建脚本（clang armv7） |
 | `deploy.py` | 部署 + 日志脚本 |
 | `serve.py` | HTTP 服务器（保留备用） |
@@ -79,6 +87,10 @@ python3 deploy.py --logs              # 仅查看日志
 15. **难度选择器颜色修复**: `[UIColor lightGrayColor]`（#aaa，不可见）→ `[self onSurfaceVariantColor]`（#3e4945，深灰绿），Game1 + Flashcard 统一修复
 16. **Game1 `starTapped:` 修复**: 不再调用 `buildGameUI` 销毁全部视图（导致 star 按钮无法响应），改为只重建卡片区域（`rebuildCards`）+ 切换检查按钮可见性 + 更新星级
 17. **难度选择器改用 UILabel + UITapGestureRecognizer**: 解决 iOS 9 上 UIButtonTypeCustom 在 transform + clipsToBounds 下无法接收 touch 事件的 bug。两个游戏（Game1 + Flashcard）统一替换，同时 Game1 难度选择器改为在 buildGameUI 中最后创建确保 z-order 最顶层，Flashcard footerView 显式设置 clipsToBounds = NO
+18. **HomeScreen 新入口**: `HomeScreenViewController` 为 root VC，两个按钮（识字→MainScreen、Pinyin→PinyinMain），`AppDelegate.m` 相应更新
+19. **Pinyin 主界面**: 4×4 无边框汉字网格、拼音切换按钮（汉字上方显示拼音 + 下划线）、章节选择器（UISegmentedControl + SquishyButton 课网格，匹配识字模块风格）、Top bar 按钮右对齐平均分布
+20. **Pinyin 游戏（听音打字）**: overlay 覆盖层 + 弹出输入卡片（英键盘、大汉字、拼音无需声调）、cuola.caf/jixujiayou.caf/nizhenbang.caf 音效反馈、易(顺序)/难(乱序)模式、红/绿底标记结果、NSUserDefaults 保存/恢复进度（含剩余字索引）、答对答错分开标记、全部完成纸屑庆祝
+21. **拼音声调转换**: `TextbookManager.m` 新增 `PinyinToneToMarks()` C 函数，将 CSV 中 "han4" 格式转换为 Unicode 声调 "hàn"，Flashcard 也一并受益
 
 ### ❌ 已知问题
 

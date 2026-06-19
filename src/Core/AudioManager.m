@@ -5,6 +5,7 @@
 @property (strong, nonatomic) AVAudioPlayer *player;
 @property (strong, nonatomic) NSMutableArray *retiredPlayers;
 @property (assign, nonatomic) BOOL isLoading;
+@property (copy, nonatomic) void (^completionBlock)(void);
 @end
 
 @implementation AudioManager
@@ -67,8 +68,14 @@
     });
 }
 
+- (void)playSoundNamed:(NSString *)soundName completion:(void (^)(void))completion {
+    [self playSoundNamed:soundName];
+    self.completionBlock = completion;
+}
+
 - (void)stopCurrentSound {
     self.isLoading = NO;
+    self.completionBlock = nil;
     if (self.player) {
         AVAudioPlayer *oldPlayer = self.player;
         oldPlayer.delegate = nil;
@@ -100,6 +107,10 @@
                        dispatch_get_main_queue(), ^{
             [self.retiredPlayers removeObject:oldPlayer];
         });
+        if (self.completionBlock) {
+            self.completionBlock();
+            self.completionBlock = nil;
+        }
     }
 }
 

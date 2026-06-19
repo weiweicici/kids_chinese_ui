@@ -1,6 +1,7 @@
 #import "WordModel.h"
 
 static NSDictionary *_strokeMapCache = nil;
+static NSDictionary *_gifToCharCache = nil; // gifIndex (NSNumber) -> character (NSString)
 
 @implementation WordModel
 
@@ -33,29 +34,51 @@ static NSDictionary *_strokeMapCache = nil;
     return map;
 }
 
-- (NSString *)strokeGifName {
-    if (![self hasStrokeGif]) {
-        return nil;
+- (NSDictionary *)gifToCharMap {
+    if (_gifToCharCache) return _gifToCharCache;
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"stroke_map_detail" ofType:@"json" inDirectory:@"ChineseWordmp3"];
+    if (!path) return nil;
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (!data) return nil;
+    NSArray *entries = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    if (![entries isKindOfClass:[NSArray class]]) return nil;
+    NSMutableDictionary *map = [NSMutableDictionary dictionary];
+    for (NSDictionary *entry in entries) {
+        NSNumber *gif = entry[@"gif"];
+        NSString *ch = entry[@"char"];
+        if (gif && ch) {
+            map[gif] = ch;
+        }
     }
-    // If plist provides a direct GIF name override, use it
+    _gifToCharCache = map;
+    return map;
+}
+
+- (NSString *)strokeGifName {
     if (self.strokeGifNameOverride) {
         return self.strokeGifNameOverride;
     }
-    NSInteger gifIndex = (self.lessonNumber - 1) * 16 + self.wordIndex;
-    NSDictionary *map = [self strokeMapForBook:self.bookNumber];
-    if (map) {
-        NSString *key = [NSString stringWithFormat:@"%ld", (long)gifIndex];
-        NSNumber *corrected = [map objectForKey:key];
-        if (corrected) {
-            gifIndex = [corrected integerValue];
-        }
+    if (![self hasStrokeGif]) {
+        return nil;
     }
+    NSInteger gifIndex = (self.lessonNumber - 1) * 16 + self.wordIndex;
     return [NSString stringWithFormat:@"%ld_ch%ld.gif", (long)self.bookNumber, (long)gifIndex];
 }
 
 - (BOOL)hasStrokeGif {
-    // GIFs are only provided for the first 10 lessons of each book (up to index 160)
-    return self.lessonNumber <= 10;
+    if (self.strokeGifNameOverride) return YES;
+    if (self.bookNumber >= 2 && self.lessonNumber <= 10) return YES;
+    if (self.bookNumber == 1 && self.lessonNumber <= 10) {
+        NSInteger gifIndex = (self.lessonNumber - 1) * 16 + self.wordIndex;
+        NSDictionary *g2c = [self gifToCharMap];
+        if (g2c) {
+            NSString *expectedChar = g2c[@(gifIndex)];
+            if ([expectedChar isEqualToString:self.character]) {
+                return YES;
+            }
+        }
+    }
+    return NO;
 }
 
 - (NSString *)description {

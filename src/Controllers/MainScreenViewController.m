@@ -6,6 +6,7 @@
 #import "FlashcardViewController.h"
 #import "Game1ViewController.h"
 #import "Game2ViewController.h"
+#import "Game3ViewController.h"
 
 @interface MainScreenViewController ()
 
@@ -54,6 +55,15 @@
     UIView *topSeparator = [[UIView alloc] initWithFrame:CGRectMake(0, 79.5f, 768.0f, 0.5f)];
     topSeparator.backgroundColor = [self surfaceContainerColor];
     [topNavBar addSubview:topSeparator];
+    
+    // Back button (small arrow, pushed from HomeScreen)
+    UIButton *backBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    backBtn.frame = CGRectMake(4, 20, 40, 40);
+    [backBtn setTitle:@"◀" forState:UIControlStateNormal];
+    [backBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    backBtn.titleLabel.font = [UIFont systemFontOfSize:22];
+    [backBtn addTarget:self action:@selector(backToHome) forControlEvents:UIControlEventTouchUpInside];
+    [topNavBar addSubview:backBtn];
     
     // Book icon (circle with icon)
     UIView *bookIconView = [[UIView alloc] initWithFrame:CGRectMake(40.0f, 16.0f, 48.0f, 48.0f)];
@@ -148,26 +158,26 @@
     [tab1 addTarget:self action:@selector(tab1Clicked) forControlEvents:UIControlEventTouchUpInside];
     [bottomNavBar addSubview:tab1];
     
-    // Tab 2: 找字游戏
+    // Tab 2: 跳字游戏
     SquishyButton *tab2 = [[SquishyButton alloc] initWithFrame:CGRectMake(186.0f, 18.0f, 130.0f, 64.0f)
-                                               backgroundColor:[self surfaceContainerColor]
-                                                   shadowColor:[self onSurfaceVariantColor]
+                                               backgroundColor:[self secondaryContainerColor]
+                                                   shadowColor:[self primaryColor]
                                                   cornerRadius:16.0f];
-    [tab2 setTitle:@"🔍 找字游戏" forState:UIControlStateNormal];
-    [tab2 setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    [tab2 setTitle:@"🫧 跳字游戏" forState:UIControlStateNormal];
+    [tab2 setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
     tab2.titleLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:16.0f];
     [tab2 addTarget:self action:@selector(tab2Clicked) forControlEvents:UIControlEventTouchUpInside];
     [bottomNavBar addSubview:tab2];
     
-    // Tab 3: 跳字游戏
+    // Tab 3: 找字游戏
     SquishyButton *tab3 = [[SquishyButton alloc] initWithFrame:CGRectMake(332.0f, 18.0f, 130.0f, 64.0f)
-                                               backgroundColor:[self surfaceContainerColor]
-                                                   shadowColor:[self onSurfaceVariantColor]
+                                               backgroundColor:[self primaryContainerColor]
+                                                   shadowColor:[self primaryColor]
                                                   cornerRadius:16.0f];
-    [tab3 setTitle:@"🏃 跳字游戏" forState:UIControlStateNormal];
-    [tab3 setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    [tab3 setTitle:@"🔍 找字游戏" forState:UIControlStateNormal];
+    [tab3 setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
     tab3.titleLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:16.0f];
-    [tab3 addTarget:self action:@selector(comingSoonAlert) forControlEvents:UIControlEventTouchUpInside];
+    [tab3 addTarget:self action:@selector(tab3Clicked) forControlEvents:UIControlEventTouchUpInside];
     [bottomNavBar addSubview:tab3];
     
     // Tab 4: 认读游戏
@@ -205,6 +215,7 @@
 #pragma mark - Reload Data
 
 - (void)reloadLessonData {
+    [[AudioManager sharedManager] stopCurrentSound];
     self.lessonModel = [[TextbookManager sharedManager] lessonForBook:self.currentBook lesson:self.currentLesson];
     if (!self.lessonModel) {
         NSLog(@"Error: Lesson data not found for book %ld lesson %ld", (long)self.currentBook, (long)self.currentLesson);
@@ -266,6 +277,10 @@
 
 #pragma mark - Actions
 
+- (void)backToHome {
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 - (void)cardClicked:(RiceCellView *)sender {
     // Handled by onTouchDown block in createCellForWord:
 }
@@ -296,6 +311,13 @@
     [self.navigationController pushViewController:gameVC animated:YES];
 }
 
+- (void)tab3Clicked {
+    Game3ViewController *gameVC = [[Game3ViewController alloc] init];
+    gameVC.currentBook = self.currentBook;
+    gameVC.currentLesson = self.currentLesson;
+    [self.navigationController pushViewController:gameVC animated:YES];
+}
+
 - (void)tab4Clicked {
     FlashcardViewController *flashcardVC = [[FlashcardViewController alloc] init];
     flashcardVC.currentBook = self.currentBook;
@@ -308,7 +330,7 @@
 
 - (void)comingSoonAlert {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"敬请期待"
-                                                                   message:@"该游戏还在开发中，快去试试 拼字/找字 游戏吧！"
+                                                                   message:@"该游戏还在开发中，快去试试其他游戏吧！"
                                                             preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];

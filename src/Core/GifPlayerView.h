@@ -8,4 +8,7 @@
 // Stops playback, removes timers, and deallocates CGImageSource file handles
 - (void)stop;
 
+// Total animation duration in seconds (sum of all frame delays)
+@property (readonly, nonatomic) float totalDuration;
+
 @end

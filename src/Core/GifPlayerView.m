@@ -6,7 +6,7 @@
 @property (assign, nonatomic) CGImageSourceRef imageSource;
 @property (assign, nonatomic) NSInteger frameCount;
 @property (strong, nonatomic) NSMutableArray *frameDelaySum; // Cumulative prefix sum of frame durations
-@property (assign, nonatomic) float totalDuration;
+@property (readwrite, nonatomic) float totalDuration;
 @property (assign, nonatomic) CFTimeInterval startTime;
 @property (assign, nonatomic) NSInteger currentFrameIndex;
 

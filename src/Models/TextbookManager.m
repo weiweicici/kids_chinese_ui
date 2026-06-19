@@ -4,6 +4,57 @@
 @property (strong, nonatomic) NSMutableDictionary<NSNumber *, NSArray<LessonModel *> *> *booksData;
 @end
 
+// Convert "han4" → "hàn", "zhe5" → "zhe"
+static NSString *PinyinToneToMarks(NSString *src) {
+    if (src.length < 2) return src;
+    NSString *lastChar = [src substringFromIndex:src.length - 1];
+    NSInteger tone = [lastChar integerValue];
+    if (tone < 1 || tone > 5) return src;
+    NSString *body = [src substringToIndex:src.length - 1];
+    if (body.length == 0) return src;
+    if (tone == 5) return body;
+
+    static NSDictionary *marks = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        marks = @{
+            @"a": @[@"ā", @"á", @"ǎ", @"à"],
+            @"e": @[@"ē", @"é", @"ě", @"è"],
+            @"i": @[@"ī", @"í", @"ǐ", @"ì"],
+            @"o": @[@"ō", @"ó", @"ǒ", @"ò"],
+            @"u": @[@"ū", @"ú", @"ǔ", @"ù"],
+            @"ü": @[@"ǖ", @"ǘ", @"ǚ", @"ǜ"],
+        };
+    });
+
+    // Rule 1: a / e wins
+    NSInteger vowelIdx = -1;
+    NSString *vowelChar = nil;
+    NSRange r = [body rangeOfString:@"a"];
+    if (r.location != NSNotFound) { vowelIdx = r.location; vowelChar = @"a"; }
+    if (vowelIdx == -1) {
+        r = [body rangeOfString:@"e"];
+        if (r.location != NSNotFound) { vowelIdx = r.location; vowelChar = @"e"; }
+    }
+    // Rule 2: ou → o
+    if (vowelIdx == -1) {
+        r = [body rangeOfString:@"ou"];
+        if (r.location != NSNotFound) { vowelIdx = r.location; vowelChar = @"o"; }
+    }
+    // Rule 3: last vowel
+    if (vowelIdx == -1) {
+        NSArray *vowels = @[@"a", @"e", @"i", @"o", @"u", @"ü"];
+        for (NSString *v in vowels) {
+            r = [body rangeOfString:v options:NSBackwardsSearch];
+            if (r.location != NSNotFound) { vowelIdx = r.location; vowelChar = v; }
+        }
+    }
+    if (vowelIdx == -1) return src;
+
+    NSString *marked = marks[vowelChar][tone - 1];
+    return [body stringByReplacingCharactersInRange:NSMakeRange(vowelIdx, 1) withString:marked];
+}
+
 @implementation TextbookManager
 
 + (instancetype)sharedManager {
@@ -102,10 +153,10 @@
                 word.wordIndex = i + 1; // 1-based
                 word.character = character;
 
-                // Set pinyin from CSV lookup
+                // Set pinyin from CSV lookup; convert tone numbers to Unicode marks
                 NSArray *pyData = pinyinLookup[character];
                 if (pyData) {
-                    word.pinyinWithTone = pyData[0];
+                    word.pinyinWithTone = PinyinToneToMarks(pyData[0]);
                     word.pinyinWithoutTone = pyData[1];
                 } else {
                     word.pinyinWithTone = @"";

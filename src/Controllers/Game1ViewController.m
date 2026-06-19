@@ -441,8 +441,6 @@ static const void *kWordModelKey = &kWordModelKey;
 
         if (self.lockedSlots.count == 16) {
             [self gameComplete];
-        } else {
-            [self playWordSoundForCard:card];
         }
     } else {
         [self sendCardBackToBench:card];
@@ -493,7 +491,6 @@ static const void *kWordModelKey = &kWordModelKey;
                 card.layer.borderColor = [UIColor colorWithRed:46.0f/255.0f green:125.0f/255.0f blue:50.0f/255.0f alpha:1.0f].CGColor;
             }];
             [self.lockedSlots addObject:@(i)];
-            [self playWordSoundForCard:card];
         } else {
             allCorrect = NO;
             [UIView animateWithDuration:0.2f animations:^{
@@ -509,8 +506,6 @@ static const void *kWordModelKey = &kWordModelKey;
         }
     }
 
-    NSInteger totalPlaced = self.slotOccupants.count + self.lockedSlots.count;
-
     if (!anyPlaced && self.lockedSlots.count == 0) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示"
                                                                        message:@"请先把汉字卡片拖放到网格里！"
@@ -520,7 +515,7 @@ static const void *kWordModelKey = &kWordModelKey;
         return;
     }
 
-    if (allCorrect && totalPlaced == 16) {
+    if (allCorrect && self.lockedSlots.count == 16) {
         [self gameComplete];
     }
 }

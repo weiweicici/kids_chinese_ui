@@ -1,14 +1,14 @@
 #import "AppDelegate.h"
 #import "AppNavigationController.h"
-#import "MainScreenViewController.h"
+#import "HomeScreenViewController.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     
-    MainScreenViewController *mainScreen = [[MainScreenViewController alloc] init];
-    AppNavigationController *navController = [[AppNavigationController alloc] initWithRootViewController:mainScreen];
+    HomeScreenViewController *homeScreen = [[HomeScreenViewController alloc] init];
+    AppNavigationController *navController = [[AppNavigationController alloc] initWithRootViewController:homeScreen];
     
     self.window.rootViewController = navController;
     [self.window makeKeyAndVisible];
