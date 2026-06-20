@@ -44,7 +44,20 @@
 @property (strong, nonatomic) NSString *savedKey;
 @property (strong, nonatomic) UIView *gameDimView;
 @property (strong, nonatomic) SquishyButton *fullSpellCheckBtn;
+@property (strong, nonatomic) SquishyButton *fullSpellRestartBtn;
 @property (strong, nonatomic) UIView *popupCard;
+
+// Spelling game
+@property (assign, nonatomic) BOOL spellingActive;
+@property (assign, nonatomic) BOOL spellingStarted;
+@property (assign, nonatomic) NSInteger spellingIndex;
+@property (strong, nonatomic) UIView *spellingCard;
+@property (strong, nonatomic) UIView *spellingTopBar;
+@property (strong, nonatomic) UITextField *spellingInput;
+@property (strong, nonatomic) UILabel *spellingCharLabel;
+@property (strong, nonatomic) UIView *spellingUnderline;
+@property (strong, nonatomic) UIView *spellingResultBar;
+@property (strong, nonatomic) SquishyButton *spellingStartBtn;
 
 @property (strong, nonatomic) UILabel *popupCharLabel;
 @property (strong, nonatomic) UIView *popupLine;
@@ -169,7 +182,7 @@
     // 5 game entry buttons (normal mode)
     self.footerGameBtns = [NSMutableArray array];
     NSArray *gameTitles = @[@"拼音游戏(易)", @"拼音游戏(难)", @"拼写游戏", @"全文拼写(易)", @"全文拼写(难)"];
-    SEL gameActions[] = {@selector(startGameWithSender:), @selector(startGameWithSender:), @selector(comingSoonAlert), @selector(startGameWithSender:), @selector(startGameWithSender:)};
+    SEL gameActions[] = {@selector(startGameWithSender:), @selector(startGameWithSender:), @selector(startSpellingGame), @selector(startGameWithSender:), @selector(startGameWithSender:)};
     CGFloat btnW = 120;
     CGFloat btnH = 64;
     CGFloat spacing = (768.0f - 40 * 2 - btnW * 5) / 4;
@@ -363,11 +376,407 @@
 #pragma mark - Actions
 
 - (void)backBtnClicked {
+    if (self.spellingActive) {
+        [self exitSpellingGame];
+        return;
+    }
     if (self.gameActive) {
         [self exitGame];
         return;
     }
     [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - Spelling Game
+
+- (void)startSpellingGame {
+    if (self.gameActive || self.spellingActive) return;
+    self.spellingActive = YES;
+    self.spellingStarted = NO;
+    self.spellingIndex = 0;
+
+    // Hide regular footer game buttons
+    for (UIButton *btn in self.footerGameBtns) {
+        btn.hidden = YES;
+    }
+
+    // Spelling mode top bar
+    self.spellingTopBar = [[UIView alloc] initWithFrame:CGRectMake(0, 64.0f, 768.0f, 56.0f)];
+    self.spellingTopBar.backgroundColor = [self surfaceContainerColor];
+
+    CGFloat barW = 768.0f;
+    CGFloat leftX = 20.0f;
+
+    UILabel *modeLabel = [[UILabel alloc] initWithFrame:CGRectMake(leftX, 0, 120, 56)];
+    modeLabel.text = @"📖 拼写游戏";
+    modeLabel.font = [UIFont systemFontOfSize:16];
+    modeLabel.textColor = [self onSurfaceColor];
+    [self.spellingTopBar addSubview:modeLabel];
+
+    SquishyButton *chapterBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(140, 8, 80, 40)
+                                                     backgroundColor:[self surfaceContainerColor]
+                                                         shadowColor:[self onSurfaceVariantColor]
+                                                        cornerRadius:10];
+    [chapterBtn setTitle:@"📚 目录" forState:UIControlStateNormal];
+    [chapterBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    chapterBtn.titleLabel.font = [UIFont systemFontOfSize:13];
+    [chapterBtn addTarget:self action:@selector(spellingChapterTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.spellingTopBar addSubview:chapterBtn];
+
+    SquishyButton *resetBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(480, 8, 80, 40)
+                                                    backgroundColor:[self surfaceContainerColor]
+                                                        shadowColor:[self onSurfaceVariantColor]
+                                                       cornerRadius:10];
+    [resetBtn setTitle:@"🔄 重置" forState:UIControlStateNormal];
+    [resetBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    resetBtn.titleLabel.font = [UIFont systemFontOfSize:13];
+    [resetBtn addTarget:self action:@selector(spellingReset) forControlEvents:UIControlEventTouchUpInside];
+    [self.spellingTopBar addSubview:resetBtn];
+
+    self.spellingStartBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(580, 8, 80, 40)
+                                                 backgroundColor:[self primaryContainerColor]
+                                                     shadowColor:[self primaryColor]
+                                                    cornerRadius:10];
+    [self.spellingStartBtn setTitle:@"▶️ 开始" forState:UIControlStateNormal];
+    [self.spellingStartBtn setTitleColor:[self primaryColor] forState:UIControlStateNormal];
+    self.spellingStartBtn.titleLabel.font = [UIFont systemFontOfSize:13];
+    [self.spellingStartBtn addTarget:self action:@selector(spellingStartTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.spellingTopBar addSubview:self.spellingStartBtn];
+
+    SquishyButton *returnBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(barW - 100, 8, 80, 40)
+                                                     backgroundColor:[self surfaceContainerColor]
+                                                         shadowColor:[self onSurfaceVariantColor]
+                                                        cornerRadius:10];
+    [returnBtn setTitle:@"◀️ 返回" forState:UIControlStateNormal];
+    [returnBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+    returnBtn.titleLabel.font = [UIFont systemFontOfSize:13];
+    [returnBtn addTarget:self action:@selector(exitSpellingGame) forControlEvents:UIControlEventTouchUpInside];
+    [self.spellingTopBar addSubview:returnBtn];
+
+    [self.canvasView addSubview:self.spellingTopBar];
+
+    // Hide the 4×4 grid pinyin labels to keep them as references
+    // Don't change grid visibility, just overlay the card
+
+    // Create spelling card
+    CGFloat cardW = 620;
+    CGFloat cardH = 420;
+    CGFloat cardX = (768 - cardW) / 2;
+    CGFloat cardY = 180;
+
+    self.spellingCard = [[UIView alloc] initWithFrame:CGRectMake(cardX, cardY, cardW, cardH)];
+    self.spellingCard.backgroundColor = [UIColor whiteColor];
+    self.spellingCard.layer.cornerRadius = 24;
+    self.spellingCard.clipsToBounds = YES;
+    self.spellingCard.alpha = 0.0f;
+
+    // Input field
+    self.spellingInput = [[UITextField alloc] initWithFrame:CGRectMake(160, 50, 300, 48)];
+    self.spellingInput.font = [UIFont systemFontOfSize:32];
+    self.spellingInput.textAlignment = NSTextAlignmentCenter;
+    self.spellingInput.placeholder = @"输入拼音...";
+    self.spellingInput.keyboardType = UIKeyboardTypeASCIICapable;
+    self.spellingInput.autocorrectionType = UITextAutocorrectionTypeNo;
+    self.spellingInput.spellCheckingType = UITextSpellCheckingTypeNo;
+    self.spellingInput.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.spellingInput.returnKeyType = UIReturnKeyDone;
+    self.spellingInput.delegate = (id<UITextFieldDelegate>)self;
+    [self.spellingCard addSubview:self.spellingInput];
+
+    // Underline below input
+    UIView *inputLine = [[UIView alloc] initWithFrame:CGRectMake(160, 104, 300, 1.5)];
+    inputLine.backgroundColor = [UIColor lightGrayColor];
+    inputLine.tag = 101;
+    [self.spellingCard addSubview:inputLine];
+
+    // Character label
+    self.spellingCharLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 140, cardW, 160)];
+    self.spellingCharLabel.font = [UIFont boldSystemFontOfSize:120];
+    self.spellingCharLabel.textAlignment = NSTextAlignmentCenter;
+    self.spellingCharLabel.textColor = [UIColor blackColor];
+    [self.spellingCard addSubview:self.spellingCharLabel];
+
+    // Underline below character
+    self.spellingUnderline = [[UIView alloc] initWithFrame:CGRectMake((cardW - 80) / 2, 320, 80, 2)];
+    self.spellingUnderline.backgroundColor = [UIColor blackColor];
+    self.spellingUnderline.tag = 102;
+    [self.spellingCard addSubview:self.spellingUnderline];
+
+    [self.canvasView addSubview:self.spellingCard];
+
+    [UIView animateWithDuration:0.3f animations:^{
+        self.spellingCard.alpha = 1.0f;
+    }];
+
+    // Show game footer
+    self.footerModeLabel.text = @"拼写游戏 第0/16字";
+    self.footerStartBtn.hidden = YES;
+    self.footerReplayBtn.hidden = NO;
+    self.footerReturnBtn.hidden = NO;
+    self.footerProgressLabel.hidden = NO;
+    self.footerProgressLabel.text = @"0 / 16";
+}
+
+- (void)exitSpellingGame {
+    if (!self.spellingActive) return;
+    self.spellingActive = NO;
+    self.spellingStarted = NO;
+    self.spellingIndex = 0;
+
+    [self.spellingInput resignFirstResponder];
+
+    if (self.spellingCard) {
+        [self.spellingCard removeFromSuperview];
+        self.spellingCard = nil;
+    }
+    if (self.spellingTopBar) {
+        [self.spellingTopBar removeFromSuperview];
+        self.spellingTopBar = nil;
+    }
+    if (self.spellingResultBar) {
+        [self.spellingResultBar removeFromSuperview];
+        self.spellingResultBar = nil;
+    }
+    self.spellingInput = nil;
+    self.spellingCharLabel = nil;
+    self.spellingUnderline = nil;
+    self.spellingStartBtn = nil;
+
+    for (UIButton *btn in self.footerGameBtns) {
+        btn.hidden = NO;
+    }
+
+    self.footerModeLabel.text = @"";
+    self.footerStartBtn.hidden = YES;
+    self.footerReplayBtn.hidden = YES;
+    self.footerReturnBtn.hidden = YES;
+    self.footerProgressLabel.hidden = YES;
+}
+
+- (void)spellingStartTapped {
+    if (self.words.count == 0) return;
+    self.spellingStarted = YES;
+    self.spellingIndex = 0;
+    [self.spellingStartBtn setTitle:@"⏩ 继续" forState:UIControlStateNormal];
+
+    [self showSpellingCardAtIndex:self.spellingIndex];
+    [self.spellingInput becomeFirstResponder];
+}
+
+- (void)showSpellingCardAtIndex:(NSInteger)idx {
+    if (idx < 0 || idx >= self.words.count) {
+        idx = 0;
+    }
+    WordModel *word = self.words[idx];
+    self.spellingCharLabel.text = word.character;
+    self.spellingInput.text = @"";
+    self.spellingInput.placeholder = @"输入拼音...";
+
+    // Remove result bar if visible
+    if (self.spellingResultBar) {
+        [self.spellingResultBar removeFromSuperview];
+        self.spellingResultBar = nil;
+    }
+    // Ensure input and underline visible
+    UIView *inpLine = [self.spellingCard viewWithTag:101];
+    inpLine.hidden = NO;
+    self.spellingUnderline.hidden = NO;
+
+    self.spellingInput.userInteractionEnabled = YES;
+    [self.spellingInput becomeFirstResponder];
+
+    self.footerModeLabel.text = [NSString stringWithFormat:@"拼写游戏 第%ld/16字", (long)(idx + 1)];
+    self.footerProgressLabel.text = [NSString stringWithFormat:@"%ld / 16", (long)(idx + 1)];
+}
+
+- (void)spellingSubmit {
+    if (!self.spellingStarted || self.words.count == 0) return;
+    NSString *input = [self.spellingInput.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (input.length == 0) return;
+
+    WordModel *word = self.words[self.spellingIndex];
+    NSString *expected = [word.pinyinWithoutTone lowercaseString];
+    expected = [expected stringByReplacingOccurrencesOfString:@" " withString:@""];
+    NSString *userInput = [input lowercaseString];
+    userInput = [userInput stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+    // Remove numbers from expected for comparison (so "han4" matches "han")
+    NSString *expectedClean = expected;
+    NSCharacterSet *nonDigits = [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
+    expectedClean = [[expectedClean componentsSeparatedByCharactersInSet:[NSCharacterSet decimalDigitCharacterSet]] componentsJoinedByString:@""];
+
+    CGFloat cardW = self.spellingCard.frame.size.width;
+    CGFloat barY = 30;
+    CGFloat barH = 320;
+    self.spellingInput.userInteractionEnabled = NO;
+    [self.spellingInput resignFirstResponder];
+
+    if ([userInput isEqualToString:expectedClean]) {
+        // Correct
+        if (!self.spellingResultBar) {
+            self.spellingResultBar = [[UIView alloc] initWithFrame:CGRectMake(0, barY, cardW, barH)];
+            self.spellingResultBar.backgroundColor = [UIColor colorWithRed:0.1f green:0.8f blue:0.1f alpha:0.2f];
+            [self.spellingCard addSubview:self.spellingResultBar];
+        }
+        UILabel *correctLabel = [[UILabel alloc] initWithFrame:CGRectMake(40, barH - 60, cardW - 80, 40)];
+        correctLabel.text = @"✅ 正确！";
+        correctLabel.font = [UIFont boldSystemFontOfSize:28];
+        correctLabel.textAlignment = NSTextAlignmentCenter;
+        correctLabel.textColor = [UIColor colorWithRed:0.0f green:0.6f blue:0.0f alpha:1.0f];
+        correctLabel.tag = 201;
+        [self.spellingResultBar addSubview:correctLabel];
+
+        [[AudioManager sharedManager] playSoundNamed:@"nizhenbang.caf"];
+
+        __weak typeof(self) weakSelf = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [weakSelf spellingNextCard];
+        });
+    } else {
+        // Wrong
+        if (!self.spellingResultBar) {
+            self.spellingResultBar = [[UIView alloc] initWithFrame:CGRectMake(0, barY, cardW, barH)];
+            self.spellingResultBar.backgroundColor = [UIColor colorWithRed:0.8f green:0.1f blue:0.1f alpha:0.2f];
+            [self.spellingCard addSubview:self.spellingResultBar];
+        }
+        UILabel *wrongLabel = [[UILabel alloc] initWithFrame:CGRectMake(40, barH - 60, cardW - 80, 40)];
+        wrongLabel.text = @"❌ 再试一次";
+        wrongLabel.font = [UIFont boldSystemFontOfSize:28];
+        wrongLabel.textAlignment = NSTextAlignmentCenter;
+        wrongLabel.textColor = [UIColor colorWithRed:0.6f green:0.0f blue:0.0f alpha:1.0f];
+        wrongLabel.tag = 201;
+        [self.spellingResultBar addSubview:wrongLabel];
+
+        [[AudioManager sharedManager] playSoundNamed:@"jixujiayou.caf"];
+
+        __weak typeof(self) weakSelf = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Re-enable input for retry
+            weakSelf.spellingInput.userInteractionEnabled = YES;
+            [weakSelf.spellingInput becomeFirstResponder];
+            if (weakSelf.spellingResultBar) {
+                [weakSelf.spellingResultBar removeFromSuperview];
+                weakSelf.spellingResultBar = nil;
+            }
+            UIView *inpLine = [weakSelf.spellingCard viewWithTag:101];
+            inpLine.hidden = NO;
+            weakSelf.spellingUnderline.hidden = NO;
+        });
+    }
+}
+
+- (void)spellingNextCard {
+    if (!self.spellingActive) return;    self.spellingIndex++;
+    if (self.spellingIndex >= self.words.count) {
+        self.spellingIndex = 0;
+    }
+
+    // Slide animation: current card slides out bottom, new card slides in from top
+    CGFloat cardW = self.spellingCard.frame.size.width;
+    CGFloat cardH = self.spellingCard.frame.size.height;
+    CGFloat cardX = self.spellingCard.frame.origin.x;
+
+    // Create new card with next content
+    UIView *newCard = [[UIView alloc] initWithFrame:CGRectMake(cardX, -cardH, cardW, cardH)];
+    newCard.backgroundColor = [UIColor whiteColor];
+    newCard.layer.cornerRadius = 24;
+    newCard.clipsToBounds = YES;
+
+    // Character label
+    UILabel *newCharLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 140, cardW, 160)];
+    newCharLabel.font = [UIFont boldSystemFontOfSize:120];
+    newCharLabel.textAlignment = NSTextAlignmentCenter;
+    newCharLabel.textColor = [UIColor blackColor];
+    WordModel *word = self.words[self.spellingIndex];
+    newCharLabel.text = word.character;
+    [newCard addSubview:newCharLabel];
+
+    // Underline
+    UIView *newUnderline = [[UIView alloc] initWithFrame:CGRectMake((cardW - 80) / 2, 320, 80, 2)];
+    newUnderline.backgroundColor = [UIColor blackColor];
+    [newCard addSubview:newUnderline];
+
+    // Input field
+    UITextField *newInput = [[UITextField alloc] initWithFrame:CGRectMake(160, 50, 300, 48)];
+    newInput.font = [UIFont systemFontOfSize:32];
+    newInput.textAlignment = NSTextAlignmentCenter;
+    newInput.placeholder = @"输入拼音...";
+    newInput.keyboardType = UIKeyboardTypeASCIICapable;
+    newInput.autocorrectionType = UITextAutocorrectionTypeNo;
+    newInput.spellCheckingType = UITextSpellCheckingTypeNo;
+    newInput.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    newInput.returnKeyType = UIReturnKeyDone;
+    newInput.delegate = (id<UITextFieldDelegate>)self;
+    [newCard addSubview:newInput];
+
+    UIView *newInputLine = [[UIView alloc] initWithFrame:CGRectMake(160, 104, 300, 1.5)];
+    newInputLine.backgroundColor = [UIColor lightGrayColor];
+    [newCard addSubview:newInputLine];
+
+    [self.canvasView addSubview:newCard];
+
+    __weak typeof(self) weakSelf = self;
+    [UIView animateWithDuration:0.35f delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        // Current card slides out bottom
+        weakSelf.spellingCard.frame = CGRectMake(cardX, 768, cardW, cardH);
+        weakSelf.spellingCard.alpha = 0.5f;
+        // New card slides in from top to position
+        newCard.frame = CGRectMake(cardX, 180, cardW, cardH);
+    } completion:^(BOOL finished) {
+        [weakSelf.spellingCard removeFromSuperview];
+        weakSelf.spellingCard = newCard;
+        weakSelf.spellingCharLabel = newCharLabel;
+        weakSelf.spellingUnderline = newUnderline;
+        weakSelf.spellingInput = newInput;
+        weakSelf.spellingInput.userInteractionEnabled = YES;
+        [weakSelf.spellingInput becomeFirstResponder];
+        weakSelf.spellingResultBar = nil;
+
+        weakSelf.footerModeLabel.text = [NSString stringWithFormat:@"拼写游戏 第%ld/16字", (long)(weakSelf.spellingIndex + 1)];
+        weakSelf.footerProgressLabel.text = [NSString stringWithFormat:@"%ld / 16", (long)(weakSelf.spellingIndex + 1)];
+    }];
+}
+
+- (void)spellingReset {
+    self.spellingIndex = 0;
+    if (self.spellingStarted) {
+        [self showSpellingCardAtIndex:0];
+        [self.spellingInput becomeFirstResponder];
+    }
+}
+
+- (void)spellingChapterTapped {
+    [self showLessonPicker];
+}
+
+- (void)pickerLessonSelected:(UIButton *)sender {
+    self.currentBook = self.selectedBookForPicker;
+    self.currentLesson = sender.tag;
+    [self reloadLessonData];
+    [self dismissLessonPicker];
+
+    // Reset spelling game state
+    if (self.spellingActive) {
+        // reloadLessonData resets footers, restore spelling UI
+        for (UIButton *btn in self.footerGameBtns) {
+            btn.hidden = YES;
+        }
+        self.footerModeLabel.hidden = NO;
+        self.footerProgressLabel.hidden = NO;
+        self.footerReplayBtn.hidden = NO;
+        self.footerReturnBtn.hidden = NO;
+
+        self.spellingIndex = 0;
+        self.spellingStarted = NO;
+        [self.spellingStartBtn setTitle:@"▶️ 开始" forState:UIControlStateNormal];
+        if (self.spellingResultBar) {
+            [self.spellingResultBar removeFromSuperview];
+            self.spellingResultBar = nil;
+        }
+        if (self.words.count > 0) {
+            [self showSpellingCardAtIndex:0];
+        }
+    }
 }
 
 - (void)comingSoonAlert {
@@ -403,7 +812,9 @@
 }
 
 - (void)returnBtnClicked {
-    if (self.gameActive) {
+    if (self.spellingActive) {
+        [self exitSpellingGame];
+    } else if (self.gameActive) {
         [self exitGame];
     } else {
         [self.navigationController popViewControllerAnimated:YES];
@@ -445,9 +856,13 @@
     } else if (sender.tag == 3) {
         self.gameModeEasy = YES;
         self.fullSpell = YES;
+        [self.charResults removeAllObjects];
+        [self.userInputs removeAllObjects];
     } else if (sender.tag == 4) {
         self.gameModeEasy = NO;
         self.fullSpell = YES;
+        [self.charResults removeAllObjects];
+        [self.userInputs removeAllObjects];
     } else {
         return;
     }
@@ -565,7 +980,7 @@
         self.footerReplayBtn.hidden = YES;
         // Create check button
         if (!self.fullSpellCheckBtn) {
-            self.fullSpellCheckBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(200, 28, 110, 56)
+            self.fullSpellCheckBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(190, 28, 110, 56)
                                                           backgroundColor:[self primaryContainerColor]
                                                               shadowColor:[self primaryColor]
                                                              cornerRadius:16];
@@ -576,13 +991,30 @@
             [self.footerView addSubview:self.fullSpellCheckBtn];
         }
         self.fullSpellCheckBtn.hidden = NO;
+        // Create restart button
+        if (!self.fullSpellRestartBtn) {
+            self.fullSpellRestartBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(450, 28, 100, 56)
+                                                             backgroundColor:[self surfaceContainerColor]
+                                                                 shadowColor:[self onSurfaceVariantColor]
+                                                                cornerRadius:16];
+            [self.fullSpellRestartBtn setTitle:@"🔄 重来" forState:UIControlStateNormal];
+            [self.fullSpellRestartBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
+            self.fullSpellRestartBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+            [self.fullSpellRestartBtn addTarget:self action:@selector(fullSpellRestartTapped) forControlEvents:UIControlEventTouchUpInside];
+            [self.footerView addSubview:self.fullSpellRestartBtn];
+        }
+        self.fullSpellRestartBtn.hidden = NO;
     } else {
         self.footerReplayBtn.hidden = NO;
         // Remove check button if exists
-        if (self.fullSpellCheckBtn) {
-            [self.fullSpellCheckBtn removeFromSuperview];
-            self.fullSpellCheckBtn = nil;
-        }
+    if (self.fullSpellCheckBtn) {
+        [self.fullSpellCheckBtn removeFromSuperview];
+        self.fullSpellCheckBtn = nil;
+    }
+    if (self.fullSpellRestartBtn) {
+        [self.fullSpellRestartBtn removeFromSuperview];
+        self.fullSpellRestartBtn = nil;
+    }
     }
 
     // Dim overlay
@@ -979,6 +1411,20 @@
     [self fullSpellEvaluate];
 }
 
+- (void)fullSpellRestartTapped {
+    if (self.popupCard) {
+        [self.popupCard removeFromSuperview];
+        self.popupCard = nil;
+    }
+    [self.userInputs removeAllObjects];
+    [self.charResults removeAllObjects];
+    [self resetGameState];
+    self.correctCount = 0;
+    [self saveGameProgress];
+    // Rebuild grid
+    [self beginGame];
+}
+
 - (void)fullSpellEvaluate {
     if (self.fullSpellCheckBtn) {
         self.fullSpellCheckBtn.enabled = NO;
@@ -1113,6 +1559,10 @@
         [self.fullSpellCheckBtn removeFromSuperview];
         self.fullSpellCheckBtn = nil;
     }
+    if (self.fullSpellRestartBtn) {
+        [self.fullSpellRestartBtn removeFromSuperview];
+        self.fullSpellRestartBtn = nil;
+    }
 
     [self stopConfetti];
 
@@ -1171,7 +1621,11 @@
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
-    [self submitPinyin];
+    if (self.spellingActive && self.spellingStarted) {
+        [self spellingSubmit];
+    } else {
+        [self submitPinyin];
+    }
     return NO;
 }
 
@@ -1398,13 +1852,6 @@
 
         [gridContainer addSubview:btn];
     }
-}
-
-- (void)pickerLessonSelected:(UIButton *)sender {
-    self.currentBook = self.selectedBookForPicker;
-    self.currentLesson = sender.tag;
-    [self reloadLessonData];
-    [self dismissLessonPicker];
 }
 
 - (void)dismissLessonPicker {
