@@ -509,19 +509,29 @@
 
         NSInteger wordIdx = [self.gridOrder[i] integerValue];
         if (wordIdx < (NSInteger)self.words.count) {
-            // Check if this word was already solved (correct) — hide it
-            id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
-            BOOL isCorrect = result && [result[@"result"] isEqualToString:@"correct"];
+            // Use remainingIndices to determine if word is already solved (not remaining = hidden)
+            BOOL isSolved = ![self.remainingIndices containsObject:@(wordIdx)];
             
-            if (isCorrect && self.fullSpell) {
+            if (isSolved && self.fullSpell) {
                 self.charLabels[i].text = @"";
                 self.pinyinLabels[i].text = @"";
+                self.underlineViews[i].hidden = YES;
             } else {
                 self.charLabels[i].text = self.words[wordIdx].character;
-                self.pinyinLabels[i].text = self.fullSpell ? @"" : @"";
+                // Show user input for fullSpell, empty for pinyin game
+                if (self.fullSpell) {
+                    NSString *savedInput = self.userInputs[[@(wordIdx) stringValue]];
+                    self.pinyinLabels[i].text = savedInput ?: @"";
+                    if (savedInput) {
+                        self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:24];
+                    }
+                } else {
+                    self.pinyinLabels[i].text = @"";
+                }
                 
                 if (!self.fullSpell) {
                     // Restore visual feedback for pinyin game mode
+                    id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
                     if (result) {
                         NSString *input = result[@"input"];
                         NSString *status = result[@"result"];
@@ -827,6 +837,17 @@
         // Full spell: just save input, no correct/wrong marking
         self.userInputs[[@(idx) stringValue]] = input;
         
+        // Show user input on grid pinyin label
+        NSInteger gridPos = 0;
+        for (NSInteger i = 0; i < 16; i++) {
+            if ([self.gridOrder[i] integerValue] == idx) {
+                gridPos = i;
+                break;
+            }
+        }
+        self.pinyinLabels[gridPos].text = input;
+        self.pinyinLabels[gridPos].font = [UIFont boldSystemFontOfSize:24];
+        
         // Clear result bar (no feedback in full spell)
         self.popupResultBar.backgroundColor = [UIColor clearColor];
         
@@ -1009,6 +1030,7 @@
                     charLbl.transform = CGAffineTransformIdentity;
                     charLbl.alpha = 1;
                     pyLbl.alpha = 1;
+                    uline.hidden = YES;
                     uline.alpha = 1;
                 }];
             }
@@ -1017,6 +1039,18 @@
             self.charResults[key] = @{@"result": @"wrong", @"input": userInput};
             // Clear userInput so popup shows blank next time
             [self.userInputs removeObjectForKey:key];
+            
+            // Clear the grid pinyin display for wrong words
+            NSInteger gridPos2 = NSNotFound;
+            for (NSInteger i = 0; i < 16; i++) {
+                if ([self.gridOrder[i] integerValue] == wordIdx) {
+                    gridPos2 = i;
+                    break;
+                }
+            }
+            if (gridPos2 != NSNotFound) {
+                self.pinyinLabels[gridPos2].text = @"";
+            }
         }
     }
     
