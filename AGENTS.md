@@ -91,6 +91,10 @@ python3 deploy.py --logs              # 仅查看日志
 19. **Pinyin 主界面**: 4×4 无边框汉字网格、拼音切换按钮（汉字上方显示拼音 + 下划线）、章节选择器（UISegmentedControl + SquishyButton 课网格，匹配识字模块风格）、Top bar 按钮右对齐平均分布
 20. **Pinyin 游戏（听音打字）**: overlay 覆盖层 + 弹出输入卡片（英键盘、大汉字、拼音无需声调）、cuola.caf/jixujiayou.caf/nizhenbang.caf 音效反馈、易(顺序)/难(乱序)模式、红/绿底标记结果、NSUserDefaults 保存/恢复进度（含剩余字索引）、答对答错分开标记、全部完成纸屑庆祝
 21. **拼音声调转换**: `TextbookManager.m` 新增 `PinyinToneToMarks()` C 函数，将 CSV 中 "han4" 格式转换为 Unicode 声调 "hàn"，Flashcard 也一并受益
+22. **拼音游戏反馈重做**: 弹出卡片半透明（alpha 0.92）、新增 `popupResultBar` 覆盖输入区域显示绿/红底、网格 pinyinLabel 直接显示绿/红底 + 用户输入（24pt bold）、beginGame/exitGame/reloadLessonData 统一清理
+23. **拼音游戏输入改进**: `UIKeyboardTypeASCIICapable` + 纯 ASCII 过滤（仅允许 ü）、`delegate=nil` 防返回闪退、弹窗加大至 620×520 y=80（原 500×380 y=340）、字符 150pt、音效延迟 2.0s
+24. **拼音游戏(易)音频改为随机**: `setupGameOrder` 始终 shuffle，网格汉字维持课文顺序
+25. **拼音游戏(难)模式**: Footer 新增入口，仅差异为 16 个汉字显示为乱序（`gridOrder` 映射），音频同样随机，弹出/输入/反馈与易模式相同
 
 ### ❌ 已知问题
 

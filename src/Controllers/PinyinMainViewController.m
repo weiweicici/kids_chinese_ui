@@ -32,6 +32,7 @@
 @property (assign, nonatomic) BOOL gameModeEasy;
 @property (strong, nonatomic) NSMutableArray *remainingIndices;
 @property (strong, nonatomic) NSMutableArray *currentOrder;
+@property (strong, nonatomic) NSMutableArray *gridOrder; // word index per grid position (shuffled for 难 mode)
 @property (assign, nonatomic) NSInteger currentTargetIdx;
 @property (assign, nonatomic) NSInteger gameStep;
 @property (strong, nonatomic) NSMutableDictionary *charResults;
@@ -44,6 +45,7 @@
 @property (strong, nonatomic) UILabel *popupCharLabel;
 @property (strong, nonatomic) UIView *popupLine;
 @property (strong, nonatomic) UITextField *popupInput;
+@property (strong, nonatomic) UIView *popupResultBar;
 @property (assign, nonatomic) NSInteger popupCharIndex;
 
 @end
@@ -282,6 +284,8 @@
         cell.backgroundColor = [UIColor clearColor];
         [self removeResultLabelFromCell:cell];
         self.underlineViews[i].hidden = !self.showingPinyin;
+        self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
+        self.pinyinLabels[i].text = @"";
     }
 
     // Reset footer to normal
@@ -420,12 +424,32 @@
     [self.charResults removeAllObjects];
     [self setupGameOrder];
 
+    // Build grid order based on mode
+    NSMutableArray *gridOrder = [NSMutableArray arrayWithCapacity:16];
+    for (NSInteger i = 0; i < 16; i++) {
+        [gridOrder addObject:@(i)];
+    }
+    if (!self.gameModeEasy) {
+        for (NSInteger i = 15; i > 0; i--) {
+            [gridOrder exchangeObjectAtIndex:i withObjectAtIndex:arc4random_uniform((u_int32_t)(i + 1))];
+        }
+    }
+    self.gridOrder = gridOrder;
+
     // Clean grid
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
         [self removeResultLabelFromCell:self.gridCells[i]];
         self.underlineViews[i].hidden = NO;
         self.underlineViews[i].backgroundColor = [UIColor lightGrayColor];
+        self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
+        self.pinyinLabels[i].text = @"";
+        self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
+        self.pinyinLabels[i].hidden = NO;
+
+        // Display character based on grid order
+        NSInteger wordIdx = [self.gridOrder[i] integerValue];
+        self.charLabels[i].text = self.words[wordIdx].character;
     }
 
     // Show game footer, hide game entry buttons
@@ -433,7 +457,7 @@
         btn.hidden = YES;
     }
     self.footerModeLabel.hidden = NO;
-    self.footerModeLabel.text = @"拼音游戏(易)";
+    self.footerModeLabel.text = self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
     self.footerProgressLabel.hidden = NO;
     self.footerReturnBtn.hidden = NO;
     [self updateFooterProgress];
@@ -462,11 +486,9 @@
         [self.currentOrder addObjectsFromArray:self.remainingIndices];
     }
 
-    if (!self.gameModeEasy) {
-        // Shuffle
-        for (NSInteger i = self.currentOrder.count - 1; i > 0; i--) {
-            [self.currentOrder exchangeObjectAtIndex:i withObjectAtIndex:arc4random_uniform((u_int32_t)(i + 1))];
-        }
+    // Shuffle so audio plays in random order
+    for (NSInteger i = self.currentOrder.count - 1; i > 0; i--) {
+        [self.currentOrder exchangeObjectAtIndex:i withObjectAtIndex:arc4random_uniform((u_int32_t)(i + 1))];
     }
 }
 
@@ -485,9 +507,11 @@
 - (void)gameCellTapped:(NSInteger)idx cell:(UIView *)cell {
     if (self.popupCard) return;
 
-    if (idx == self.currentTargetIdx) {
+    NSInteger wordIdx = [self.gridOrder[idx] integerValue];
+
+    if (wordIdx == self.currentTargetIdx) {
         // Correct character — show popup
-        [self showPopupForCharIndex:idx];
+        [self showPopupForCharIndex:wordIdx];
     } else {
         // Wrong character — feedback
         [[AudioManager sharedManager] playSoundNamed:@"cuola.caf"];
@@ -522,13 +546,13 @@
         [self.popupCard removeFromSuperview];
     }
 
-    CGFloat cardW = 500;
-    CGFloat cardH = 380;
+    CGFloat cardW = 620;
+    CGFloat cardH = 520;
     CGFloat cardX = (768 - cardW) / 2;
-    CGFloat cardY = 340;
+    CGFloat cardY = 80;
 
     self.popupCard = [[UIView alloc] initWithFrame:CGRectMake(cardX, cardY, cardW, cardH)];
-    self.popupCard.backgroundColor = [UIColor whiteColor];
+    self.popupCard.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.92f];
     self.popupCard.layer.cornerRadius = 24;
     self.popupCard.clipsToBounds = YES;
     self.popupCard.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -560,15 +584,22 @@
     [returnPopupBtn addTarget:self action:@selector(dismissPopup) forControlEvents:UIControlEventTouchUpInside];
     [self.popupCard addSubview:returnPopupBtn];
 
+    // Result bar (behind input + line, transparent initially)
+    self.popupResultBar = [[UIView alloc] initWithFrame:CGRectMake(20, 75, cardW - 40, 85)];
+    self.popupResultBar.backgroundColor = [UIColor clearColor];
+    self.popupResultBar.layer.cornerRadius = 12;
+    [self.popupCard addSubview:self.popupResultBar];
+
     // Text field
     self.popupInput = [[UITextField alloc] initWithFrame:CGRectMake(80, 90, cardW - 160, 50)];
     self.popupInput.borderStyle = UITextBorderStyleRoundedRect;
-    self.popupInput.keyboardType = UIKeyboardTypeAlphabet;
+    self.popupInput.keyboardType = UIKeyboardTypeASCIICapable;
     self.popupInput.autocorrectionType = UITextAutocorrectionTypeNo;
     self.popupInput.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.popupInput.spellCheckingType = UITextSpellCheckingTypeNo;
     self.popupInput.returnKeyType = UIReturnKeyDone;
     self.popupInput.placeholder = @"输入拼音";
-    self.popupInput.font = [UIFont systemFontOfSize:24];
+    self.popupInput.font = [UIFont systemFontOfSize:28];
     self.popupInput.textAlignment = NSTextAlignmentCenter;
     self.popupInput.delegate = (id<UITextFieldDelegate>)self;
     [self.popupCard addSubview:self.popupInput];
@@ -579,9 +610,9 @@
     [self.popupCard addSubview:line];
 
     // Character
-    self.popupCharLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 170, cardW, 120)];
+    self.popupCharLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 230, cardW - 40, 240)];
     self.popupCharLabel.textAlignment = NSTextAlignmentCenter;
-    self.popupCharLabel.font = [UIFont boldSystemFontOfSize:100];
+    self.popupCharLabel.font = [UIFont boldSystemFontOfSize:150];
     self.popupCharLabel.textColor = [UIColor darkTextColor];
     self.popupCharLabel.text = word.character;
     [self.popupCard addSubview:self.popupCharLabel];
@@ -613,49 +644,42 @@
 
     BOOL correct = [input isEqualToString:expected];
 
-    // Update grid cell background
-    NSInteger idx = self.popupCharIndex;
-    UIView *cell = self.gridCells[idx];
+    NSInteger idx = self.popupCharIndex; // word index
+
+    // Find grid position where this word is displayed
+    NSInteger gridPos = 0;
+    for (NSInteger i = 0; i < 16; i++) {
+        if ([self.gridOrder[i] integerValue] == idx) {
+            gridPos = i;
+            break;
+        }
+    }
+
+    UIView *cell = self.gridCells[gridPos];
+    UILabel *pyLbl = self.pinyinLabels[gridPos];
     self.totalAttempts++;
 
     if (correct) {
         self.correctCount++;
-        cell.backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.35f];
-        self.popupCard.backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.2f];
+        self.popupResultBar.backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
         [[AudioManager sharedManager] playSoundNamed:@"nizhenbang.caf"];
 
-        // Write result on grid cell
-        [self removeResultLabelFromCell:cell];
-        UILabel *resultLabel = [[UILabel alloc] initWithFrame:CGRectMake(4, cell.frame.size.height - 30, cell.frame.size.width - 8, 26)];
-        resultLabel.text = input;
-        resultLabel.textAlignment = NSTextAlignmentCenter;
-        resultLabel.font = [UIFont boldSystemFontOfSize:18];
-        resultLabel.textColor = [UIColor colorWithRed:0.0f green:0.5f blue:0.0f alpha:1.0f];
-        resultLabel.adjustsFontSizeToFitWidth = YES;
-        resultLabel.minimumScaleFactor = 0.5;
-        resultLabel.tag = 888;
-        resultLabel.backgroundColor = [UIColor clearColor];
-        [cell addSubview:resultLabel];
+        // Update grid pinyin area: green background + user input
+        pyLbl.backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
+        pyLbl.text = input;
+        pyLbl.font = [UIFont boldSystemFontOfSize:24];
 
         self.charResults[@(idx)] = @{@"result": @"correct", @"input": input};
         [self.remainingIndices removeObject:@(idx)];
         self.gameStep++;
     } else {
-        cell.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.35f];
-        self.popupCard.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.2f];
+        self.popupResultBar.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
         [[AudioManager sharedManager] playSoundNamed:@"jixujiayou.caf"];
 
-        [self removeResultLabelFromCell:cell];
-        UILabel *resultLabel = [[UILabel alloc] initWithFrame:CGRectMake(4, cell.frame.size.height - 30, cell.frame.size.width - 8, 26)];
-        resultLabel.text = input;
-        resultLabel.textAlignment = NSTextAlignmentCenter;
-        resultLabel.font = [UIFont boldSystemFontOfSize:18];
-        resultLabel.textColor = [UIColor colorWithRed:0.7f green:0.0f blue:0.0f alpha:1.0f];
-        resultLabel.adjustsFontSizeToFitWidth = YES;
-        resultLabel.minimumScaleFactor = 0.5;
-        resultLabel.tag = 888;
-        resultLabel.backgroundColor = [UIColor clearColor];
-        [cell addSubview:resultLabel];
+        // Update grid pinyin area: red background + user input
+        pyLbl.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
+        pyLbl.text = input;
+        pyLbl.font = [UIFont boldSystemFontOfSize:24];
 
         self.charResults[@(idx)] = @{@"result": @"wrong", @"input": input};
         self.gameStep++;
@@ -663,7 +687,7 @@
 
     [self updateFooterProgress];
 
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         [self closePopupAndContinue];
     });
 }
@@ -686,8 +710,10 @@
     [self.popupCard removeFromSuperview];
     self.popupCard = nil;
     self.popupCharIndex = -1;
+    self.popupInput.delegate = nil;
     self.popupInput = nil;
     self.popupCharLabel = nil;
+    self.popupResultBar = nil;
 
     if (self.gameDimView) {
         self.gameDimView.userInteractionEnabled = NO;
@@ -732,9 +758,14 @@
     // Restore grid to normal
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
+        self.charLabels[i].text = self.words[i] ? self.words[i].character : @"";
         self.underlineViews[i].hidden = !self.showingPinyin;
         self.underlineViews[i].backgroundColor = [UIColor lightGrayColor];
         [self removeResultLabelFromCell:self.gridCells[i]];
+        self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
+        self.pinyinLabels[i].text = self.words[i] ? [self.words[i] pinyinWithTone] : @"";
+        self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
+        self.pinyinLabels[i].hidden = !self.showingPinyin;
     }
 
     // Restore footer to game entry buttons
@@ -747,18 +778,30 @@
     self.footerReturnBtn.enabled = YES;
 
     [self updateFooterModeLabel];
+
+    self.gridOrder = nil;
 }
 
 - (void)updateFooterModeLabel {
+    NSString *modeName = self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
     if (self.remainingIndices.count > 0 && self.remainingIndices.count < 16) {
-        self.footerModeLabel.text = [NSString stringWithFormat:@"拼音游戏(易) (%ld/16)",
-                                     (long)(16 - self.remainingIndices.count)];
+        self.footerModeLabel.text = [NSString stringWithFormat:@"%@ (%ld/16)",
+                                     modeName, (long)(16 - self.remainingIndices.count)];
     } else {
-        self.footerModeLabel.text = @"拼音游戏(易)";
+        self.footerModeLabel.text = modeName;
     }
 }
 
 #pragma mark - UITextFieldDelegate
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+    if (string.length == 0) return YES;
+    for (NSUInteger i = 0; i < string.length; i++) {
+        unichar c = [string characterAtIndex:i];
+        if (c > 127 && c != 0x00FC) return NO;
+    }
+    return YES;
+}
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
     [self submitPinyin];
