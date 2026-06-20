@@ -31,16 +31,19 @@
 // Game state
 @property (assign, nonatomic) BOOL gameActive;
 @property (assign, nonatomic) BOOL gameModeEasy;
+@property (assign, nonatomic) BOOL fullSpell; // YES = 全文拼写 mode
 @property (strong, nonatomic) NSMutableArray *remainingIndices;
 @property (strong, nonatomic) NSMutableArray *currentOrder;
 @property (strong, nonatomic) NSMutableArray *gridOrder; // word index per grid position (shuffled for 难 mode)
 @property (assign, nonatomic) NSInteger currentTargetIdx;
 @property (assign, nonatomic) NSInteger gameStep;
 @property (strong, nonatomic) NSMutableDictionary *charResults;
+@property (strong, nonatomic) NSMutableDictionary *userInputs; // wordIndex → user typed pinyin
 @property (assign, nonatomic) NSInteger correctCount;
 @property (assign, nonatomic) NSInteger totalAttempts;
 @property (strong, nonatomic) NSString *savedKey;
 @property (strong, nonatomic) UIView *gameDimView;
+@property (strong, nonatomic) SquishyButton *fullSpellCheckBtn;
 @property (strong, nonatomic) UIView *popupCard;
 
 @property (strong, nonatomic) UILabel *popupCharLabel;
@@ -70,9 +73,11 @@
 
     self.gameActive = NO;
     self.gameModeEasy = YES;
+    self.fullSpell = NO;
     self.remainingIndices = [NSMutableArray array];
     self.currentOrder = [NSMutableArray array];
     self.charResults = [NSMutableDictionary dictionary];
+    self.userInputs = [NSMutableDictionary dictionary];
     self.popupCharIndex = -1;
 
     [self setupUI];
@@ -164,7 +169,7 @@
     // 5 game entry buttons (normal mode)
     self.footerGameBtns = [NSMutableArray array];
     NSArray *gameTitles = @[@"拼音游戏(易)", @"拼音游戏(难)", @"拼写游戏", @"全文拼写(易)", @"全文拼写(难)"];
-    SEL gameActions[] = {@selector(startGameWithSender:), @selector(startGameWithSender:), @selector(comingSoonAlert), @selector(comingSoonAlert), @selector(comingSoonAlert)};
+    SEL gameActions[] = {@selector(startGameWithSender:), @selector(startGameWithSender:), @selector(comingSoonAlert), @selector(startGameWithSender:), @selector(startGameWithSender:)};
     CGFloat btnW = 120;
     CGFloat btnH = 64;
     CGFloat spacing = (768.0f - 40 * 2 - btnW * 5) / 4;
@@ -280,7 +285,9 @@
 #pragma mark - Data
 
 - (void)updateSavedKey {
-    self.savedKey = [NSString stringWithFormat:@"pinyin_progress_b%ld_l%ld_%@",
+    NSString *prefix = self.fullSpell ? @"fullspell" : @"pinyin";
+    self.savedKey = [NSString stringWithFormat:@"%@_progress_b%ld_l%ld_%@",
+                     prefix,
                      (long)self.currentBook,
                      (long)self.currentLesson,
                      self.gameModeEasy ? @"easy" : @"hard"];
@@ -289,12 +296,14 @@
 - (void)reloadLessonData {
     // Clear game state when switching lessons
     self.gameActive = NO;
+    self.fullSpell = NO;
     self.correctCount = 0;
     self.totalAttempts = 0;
     self.gameStep = 0;
     [self.remainingIndices removeAllObjects];
     [self.currentOrder removeAllObjects];
     [self.charResults removeAllObjects];
+    [self.userInputs removeAllObjects];
     [self resetGameState];
 
     // Clean grid UI
@@ -316,6 +325,10 @@
     self.footerReplayBtn.hidden = YES;
     self.footerReturnBtn.hidden = YES;
     self.footerReturnBtn.enabled = YES;
+    if (self.fullSpellCheckBtn) {
+        [self.fullSpellCheckBtn removeFromSuperview];
+        self.fullSpellCheckBtn = nil;
+    }
 
     LessonModel *lesson = [[TextbookManager sharedManager] lessonForBook:self.currentBook lesson:self.currentLesson];
     if (!lesson) {
@@ -425,8 +438,16 @@
 - (void)startGameWithSender:(UIButton *)sender {
     if (sender.tag == 0) {
         self.gameModeEasy = YES;
+        self.fullSpell = NO;
     } else if (sender.tag == 1) {
         self.gameModeEasy = NO;
+        self.fullSpell = NO;
+    } else if (sender.tag == 3) {
+        self.gameModeEasy = YES;
+        self.fullSpell = YES;
+    } else if (sender.tag == 4) {
+        self.gameModeEasy = NO;
+        self.fullSpell = YES;
     } else {
         return;
     }
@@ -442,17 +463,27 @@
 
     self.gameActive = YES;
     
-    // Correctly restore correctCount based on remaining indices
-    self.correctCount = 16 - self.remainingIndices.count;
-    
-    // Only reset totalAttempts and charResults if starting a completely new game
-    if (self.remainingIndices.count == 16) {
-        self.totalAttempts = 0;
-        [self.charResults removeAllObjects];
+    if (!self.fullSpell) {
+        // Pinyin game mode
+        self.correctCount = 16 - self.remainingIndices.count;
+        if (self.remainingIndices.count == 16) {
+            self.totalAttempts = 0;
+            [self.charResults removeAllObjects];
+        }
+        self.gameStep = 0;
+        [self setupGameOrder];
+    } else {
+        // Full spell mode
+        self.correctCount = 0;
+        [self.userInputs removeAllObjects];
+        // Restore userInputs from charResults (saved as @"input")
+        for (NSString *key in self.charResults) {
+            NSDictionary *result = self.charResults[key];
+            if (result[@"input"]) {
+                self.userInputs[key] = result[@"input"];
+            }
+        }
     }
-    
-    self.gameStep = 0;
-    [self setupGameOrder];
 
     // Build grid order based on mode
     NSMutableArray *gridOrder = [NSMutableArray arrayWithCapacity:16];
@@ -470,30 +501,39 @@
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
         [self removeResultLabelFromCell:self.gridCells[i]];
-        self.underlineViews[i].hidden = NO;
+        self.underlineViews[i].hidden = !self.fullSpell;
         self.underlineViews[i].backgroundColor = [UIColor lightGrayColor];
         self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
-        self.pinyinLabels[i].text = @"";
         self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
-        self.pinyinLabels[i].hidden = NO;
+        self.pinyinLabels[i].hidden = !self.fullSpell;
 
-        // Display character based on grid order — BUG FIX: bounds check
         NSInteger wordIdx = [self.gridOrder[i] integerValue];
         if (wordIdx < (NSInteger)self.words.count) {
-            self.charLabels[i].text = self.words[wordIdx].character;
-            
-            // Restore visual feedback for already-answered correct/wrong words
+            // Check if this word was already solved (correct) — hide it
             id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
-            if (result) {
-                NSString *input = result[@"input"];
-                NSString *status = result[@"result"];
-                if ([status isEqualToString:@"correct"]) {
-                    self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
-                } else {
-                    self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
+            BOOL isCorrect = result && [result[@"result"] isEqualToString:@"correct"];
+            
+            if (isCorrect && self.fullSpell) {
+                self.charLabels[i].text = @"";
+                self.pinyinLabels[i].text = @"";
+            } else {
+                self.charLabels[i].text = self.words[wordIdx].character;
+                self.pinyinLabels[i].text = self.fullSpell ? @"" : @"";
+                
+                if (!self.fullSpell) {
+                    // Restore visual feedback for pinyin game mode
+                    if (result) {
+                        NSString *input = result[@"input"];
+                        NSString *status = result[@"result"];
+                        if ([status isEqualToString:@"correct"]) {
+                            self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
+                        } else {
+                            self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
+                        }
+                        self.pinyinLabels[i].text = input;
+                        self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:24];
+                    }
                 }
-                self.pinyinLabels[i].text = input;
-                self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:24];
             }
         } else {
             self.charLabels[i].text = @"";
@@ -505,11 +545,35 @@
         btn.hidden = YES;
     }
     self.footerModeLabel.hidden = NO;
-    self.footerModeLabel.text = self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
+    self.footerModeLabel.text = [self modeNameString];
     self.footerProgressLabel.hidden = NO;
-    self.footerReplayBtn.hidden = NO;
-    self.footerReturnBtn.hidden = NO;
     [self updateFooterProgress];
+    self.footerReturnBtn.hidden = NO;
+    self.footerReturnBtn.enabled = YES;
+
+    if (self.fullSpell) {
+        self.footerReplayBtn.hidden = YES;
+        // Create check button
+        if (!self.fullSpellCheckBtn) {
+            self.fullSpellCheckBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(200, 28, 110, 56)
+                                                          backgroundColor:[self primaryContainerColor]
+                                                              shadowColor:[self primaryColor]
+                                                             cornerRadius:16];
+            [self.fullSpellCheckBtn setTitle:@"✅ 检查" forState:UIControlStateNormal];
+            [self.fullSpellCheckBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+            self.fullSpellCheckBtn.titleLabel.font = [UIFont boldSystemFontOfSize:18];
+            [self.fullSpellCheckBtn addTarget:self action:@selector(fullSpellCheckTapped) forControlEvents:UIControlEventTouchUpInside];
+            [self.footerView addSubview:self.fullSpellCheckBtn];
+        }
+        self.fullSpellCheckBtn.hidden = NO;
+    } else {
+        self.footerReplayBtn.hidden = NO;
+        // Remove check button if exists
+        if (self.fullSpellCheckBtn) {
+            [self.fullSpellCheckBtn removeFromSuperview];
+            self.fullSpellCheckBtn = nil;
+        }
+    }
 
     // Dim overlay
     self.gameDimView = [[UIView alloc] initWithFrame:self.canvasView.bounds];
@@ -517,7 +581,16 @@
     self.gameDimView.userInteractionEnabled = NO;
     [self.canvasView addSubview:self.gameDimView];
 
-    [self playCurrentTargetAudio];
+    if (!self.fullSpell) {
+        [self playCurrentTargetAudio];
+    }
+}
+
+- (NSString *)modeNameString {
+    if (self.fullSpell) {
+        return self.gameModeEasy ? @"全文拼写(易)" : @"全文拼写(难)";
+    }
+    return self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
 }
 
 - (void)resetGameState {
@@ -585,6 +658,15 @@
 
     NSInteger wordIdx = [self.gridOrder[idx] integerValue];
     
+    if (self.fullSpell) {
+        // In full spell mode: any remaining word can be tapped
+        if ([self.remainingIndices containsObject:@(wordIdx)]) {
+            [self showPopupForCharIndex:wordIdx];
+        }
+        return;
+    }
+    
+    // Pinyin game mode
     // Check if they tapped a previously correct/wrong cell
     id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
     BOOL isPreviouslyWrong = result && [result[@"result"] isEqualToString:@"wrong"];
@@ -629,7 +711,9 @@
     self.popupCharIndex = idx;
     WordModel *word = self.words[idx];
 
-    [[AudioManager sharedManager] stopCurrentSound];
+    if (!self.fullSpell) {
+        [[AudioManager sharedManager] stopCurrentSound];
+    }
 
     if (self.popupCard) {
         [self.popupCard removeFromSuperview];
@@ -706,6 +790,14 @@
     self.popupCharLabel.text = word.character;
     [self.popupCard addSubview:self.popupCharLabel];
 
+    // Pre-fill input if user has previously typed for this word (fullSpell)
+    if (self.fullSpell) {
+        NSString *savedInput = self.userInputs[[@(idx) stringValue]];
+        if (savedInput) {
+            self.popupInput.text = savedInput;
+        }
+    }
+
     [self.canvasView addSubview:self.popupCard];
 
     // Animate in
@@ -731,6 +823,32 @@
     input = [input stringByReplacingOccurrencesOfString:@"v" withString:@"ü"];
     input = [input stringByReplacingOccurrencesOfString:@"u:" withString:@"ü"];
 
+    if (self.fullSpell) {
+        // Full spell: just save input, no correct/wrong marking
+        self.userInputs[[@(idx) stringValue]] = input;
+        
+        // Clear result bar (no feedback in full spell)
+        self.popupResultBar.backgroundColor = [UIColor clearColor];
+        
+        [self saveGameProgress];
+        [self updateFooterProgress];
+        
+        // Check if all 16 words have been filled
+        __weak typeof(self) weakSelf = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf && strongSelf.fullSpell) {
+                if (strongSelf.userInputs.count >= 16) {
+                    [strongSelf fullSpellEvaluate];
+                } else {
+                    [strongSelf closePopupAndContinue];
+                }
+            }
+        });
+        return;
+    }
+
+    // Pinyin game mode logic below
     WordModel *word = self.words[idx];
     NSString *expected = [word.pinyinWithoutTone lowercaseString];
 
@@ -819,6 +937,12 @@
         self.gameDimView.userInteractionEnabled = NO;
     }
 
+    if (self.fullSpell) {
+        // In full spell mode, don't auto-advance audio
+        // Evaluation is triggered from submitPinyin or check button
+        return;
+    }
+
     if (self.correctCount >= 16 || self.remainingIndices.count == 0) {
         [self finishGame];
     } else {
@@ -828,6 +952,103 @@
 
 - (void)updateFooterProgress {
     self.footerProgressLabel.text = [NSString stringWithFormat:@"%ld/16", (long)self.correctCount];
+}
+
+- (void)fullSpellCheckTapped {
+    [self fullSpellEvaluate];
+}
+
+- (void)fullSpellEvaluate {
+    if (self.fullSpellCheckBtn) {
+        self.fullSpellCheckBtn.enabled = NO;
+    }
+    
+    NSInteger correctWords = 0;
+    NSInteger totalChecked = 0;
+    NSMutableArray *correctWordIndices = [NSMutableArray array];
+    
+    // Compare all userInputs against expected pinyin
+    for (NSString *key in self.userInputs) {
+        NSInteger wordIdx = [key integerValue];
+        NSString *userInput = self.userInputs[key];
+        WordModel *word = self.words[wordIdx];
+        NSString *expected = [word.pinyinWithoutTone lowercaseString];
+        
+        BOOL isCorrect = [userInput isEqualToString:expected];
+        totalChecked++;
+        
+        if (isCorrect) {
+            correctWords++;
+            [correctWordIndices addObject:@(wordIdx)];
+            
+            // Mark as correct in charResults
+            self.charResults[key] = @{@"result": @"correct", @"input": userInput};
+            
+            // Find grid position and animate disappearance
+            NSInteger gridPos = NSNotFound;
+            for (NSInteger i = 0; i < 16; i++) {
+                if ([self.gridOrder[i] integerValue] == wordIdx) {
+                    gridPos = i;
+                    break;
+                }
+            }
+            
+            if (gridPos != NSNotFound) {
+                UILabel *charLbl = self.charLabels[gridPos];
+                UILabel *pyLbl = self.pinyinLabels[gridPos];
+                UIView *uline = self.underlineViews[gridPos];
+                
+                // "撕日历" animation: shrink + fade
+                [UIView animateWithDuration:0.4 animations:^{
+                    charLbl.transform = CGAffineTransformMakeScale(0.01, 0.01);
+                    charLbl.alpha = 0;
+                    pyLbl.alpha = 0;
+                    uline.alpha = 0;
+                } completion:^(BOOL finished) {
+                    charLbl.text = @"";
+                    charLbl.transform = CGAffineTransformIdentity;
+                    charLbl.alpha = 1;
+                    pyLbl.alpha = 1;
+                    uline.alpha = 1;
+                }];
+            }
+        } else {
+            // Mark as wrong in charResults (clear input for retry)
+            self.charResults[key] = @{@"result": @"wrong", @"input": userInput};
+            // Clear userInput so popup shows blank next time
+            [self.userInputs removeObjectForKey:key];
+        }
+    }
+    
+    // Remove correct words from remainingIndices
+    for (NSNumber *correctIdx in correctWordIndices) {
+        [self.remainingIndices removeObject:correctIdx];
+    }
+    
+    self.correctCount += correctWords;
+    [self updateFooterProgress];
+    [self saveGameProgress];
+    
+    NSInteger wrongCount = totalChecked - correctWords;
+    
+    if (self.fullSpellCheckBtn) {
+        self.fullSpellCheckBtn.enabled = YES;
+    }
+    
+    if (self.remainingIndices.count == 0) {
+        // All done!
+        [self finishGame];
+        return;
+    }
+    
+    // Show result alert
+    NSString *message = [NSString stringWithFormat:@"已完成 16/16\n其中 %ld 个正确，%ld 个错误\n请修改后重新检查",
+                         (long)correctWords, (long)wrongCount];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"检查结果"
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"继续" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)finishGame {
@@ -853,20 +1074,30 @@
         self.gameDimView = nil;
     }
 
+    // Clean up fullSpell check button
+    if (self.fullSpellCheckBtn) {
+        [self.fullSpellCheckBtn removeFromSuperview];
+        self.fullSpellCheckBtn = nil;
+    }
+
     [self stopConfetti];
 
-    // Restore grid to normal — BUG FIX: safe bounds check (words may be < 16)
+    // Restore grid to normal
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
         WordModel *w = (i < (NSInteger)self.words.count) ? self.words[i] : nil;
         self.charLabels[i].text = w ? w.character : @"";
+        self.charLabels[i].transform = CGAffineTransformIdentity;
+        self.charLabels[i].alpha = 1;
         self.underlineViews[i].hidden = !self.showingPinyin;
         self.underlineViews[i].backgroundColor = [UIColor lightGrayColor];
+        self.underlineViews[i].alpha = 1;
         [self removeResultLabelFromCell:self.gridCells[i]];
         self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
         self.pinyinLabels[i].text = w ? [w pinyinWithTone] : @"";
         self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
         self.pinyinLabels[i].hidden = !self.showingPinyin;
+        self.pinyinLabels[i].alpha = 1;
     }
 
     // Restore footer to game entry buttons
@@ -885,7 +1116,7 @@
 }
 
 - (void)updateFooterModeLabel {
-    NSString *modeName = self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
+    NSString *modeName = [self modeNameString];
     if (self.remainingIndices.count > 0 && self.remainingIndices.count < 16) {
         self.footerModeLabel.text = [NSString stringWithFormat:@"%@ (%ld/16)",
                                      modeName, (long)(16 - self.remainingIndices.count)];
@@ -928,7 +1159,8 @@
         @"correct": @(self.correctCount),
         @"totalAttempts": @(self.totalAttempts),
         @"remaining": remaining,
-        @"results": serializableResults
+        @"results": serializableResults,
+        @"userInputs": (self.fullSpell && self.userInputs) ? self.userInputs : @{}
     };
     [[NSUserDefaults standardUserDefaults] setObject:data forKey:self.savedKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
@@ -950,6 +1182,14 @@
     // BUG FIX: saved keys are NSString (converted in saveGameProgress), keep as-is
     NSDictionary *savedResults = data[@"results"];
     self.charResults = savedResults ? [savedResults mutableCopy] : [NSMutableDictionary dictionary];
+    
+    // Restore userInputs for fullSpell
+    NSDictionary *savedInputs = data[@"userInputs"];
+    if (savedInputs) {
+        self.userInputs = [savedInputs mutableCopy];
+    } else {
+        [self.userInputs removeAllObjects];
+    }
 
     // Only update footer label with saved progress text, do NOT touch grid UI
     [self updateFooterModeLabel];
