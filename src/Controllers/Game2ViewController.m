@@ -241,7 +241,17 @@ static const CGFloat kBubbleSize = 110.0f;
         }
     }
 
-    if (candidates.count == 0) return;
+    if (candidates.count == 0) {
+        // Safe retry loop: if no candidates are visible on screen yet, try again in 0.5s
+        __weak typeof(self) weakSelf = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf && strongSelf.gameActive && !strongSelf.targetWord) {
+                [strongSelf pickTargetFromVisibleBubbles];
+            }
+        });
+        return;
+    }
 
     UIButton *chosen = candidates[arc4random_uniform((uint32_t)candidates.count)];
     self.targetWord = objc_getAssociatedObject(chosen, kWordModelKey);
@@ -305,13 +315,36 @@ static const CGFloat kBubbleSize = 110.0f;
 - (NSInteger)pickWordIndexForNewBubble {
     NSMutableArray *candidates = [NSMutableArray array];
     for (NSInteger i = 0; i < 16; i++) {
-        if (![self.visibleIndices containsObject:@(i)]) {
+        // Prioritize words that are:
+        // 1. Not currently visible on screen
+        // 2. Not yet completed (found count < 2)
+        if (![self.visibleIndices containsObject:@(i)] && [self.wordFoundCounts[@(i)] integerValue] < 2) {
             [candidates addObject:@(i)];
         }
     }
+    
+    if (candidates.count == 0) {
+        // If all non-visible words are completed, search for visible words that are not completed
+        for (NSInteger i = 0; i < 16; i++) {
+            if ([self.wordFoundCounts[@(i)] integerValue] < 2) {
+                [candidates addObject:@(i)];
+            }
+        }
+    }
+    
+    if (candidates.count == 0) {
+        // Fallback: if all 16 words are completed, just pick a non-visible one
+        for (NSInteger i = 0; i < 16; i++) {
+            if (![self.visibleIndices containsObject:@(i)]) {
+                [candidates addObject:@(i)];
+            }
+        }
+    }
+    
     if (candidates.count == 0) {
         return arc4random_uniform(16);
     }
+    
     return [candidates[arc4random_uniform((uint32_t)candidates.count)] integerValue];
 }
 
@@ -331,13 +364,62 @@ static const CGFloat kBubbleSize = 110.0f;
 }
 
 - (void)updateGamePhysics:(CADisplayLink *)timer {
+    // 1. Move all bubbles down
     for (NSInteger i = 0; i < self.bubbles.count; i++) {
         UIButton *bubble = self.bubbles[i];
         float speed = [self.bubbleSpeeds[i] floatValue];
+        bubble.center = CGPointMake(bubble.center.x, bubble.center.y + speed);
+    }
 
-        CGPoint newCenter = CGPointMake(bubble.center.x, bubble.center.y + speed);
-        bubble.center = newCenter;
+    // 2. Resolve collisions (repulsion)
+    for (int k = 0; k < 2; k++) {
+        for (NSInteger i = 0; i < self.bubbles.count; i++) {
+            UIButton *bubbleA = self.bubbles[i];
+            for (NSInteger j = i + 1; j < self.bubbles.count; j++) {
+                UIButton *bubbleB = self.bubbles[j];
+                
+                CGFloat dx = bubbleB.center.x - bubbleA.center.x;
+                CGFloat dy = bubbleB.center.y - bubbleA.center.y;
+                CGFloat dist = sqrt(dx*dx + dy*dy);
+                CGFloat minDist = kBubbleSize + 8.0f; // bubble size + small buffer
+                
+                if (dist < minDist) {
+                    if (dist == 0) {
+                        dist = 0.1f;
+                        dx = 0.1f;
+                    }
+                    
+                    CGFloat overlap = minDist - dist;
+                    CGFloat pushX = (dx / dist) * overlap * 0.5f;
+                    CGFloat pushY = (dy / dist) * overlap * 0.5f;
+                    
+                    CGPoint centerA = bubbleA.center;
+                    CGPoint centerB = bubbleB.center;
+                    
+                    centerA.x -= pushX;
+                    centerA.y -= pushY;
+                    centerB.x += pushX;
+                    centerB.y += pushY;
+                    
+                    // Keep within horizontal boundaries: [30 + kBubbleSize/2, 30 + 628 - kBubbleSize/2]
+                    CGFloat minX = 30.0f + kBubbleSize / 2.0f;
+                    CGFloat maxX = 30.0f + 628.0f - kBubbleSize / 2.0f;
+                    
+                    if (centerA.x < minX) centerA.x = minX;
+                    if (centerA.x > maxX) centerA.x = maxX;
+                    if (centerB.x < minX) centerB.x = minX;
+                    if (centerB.x > maxX) centerB.x = maxX;
+                    
+                    bubbleA.center = centerA;
+                    bubbleB.center = centerB;
+                }
+            }
+        }
+    }
 
+    // 3. Reset bubbles that fall past bottom
+    for (NSInteger i = 0; i < self.bubbles.count; i++) {
+        UIButton *bubble = self.bubbles[i];
         if (bubble.center.y > 824.0f + 60.0f) {
             WordModel *bubbleWord = objc_getAssociatedObject(bubble, kWordModelKey);
             BOOL wasTarget = (self.gameActive && self.targetWord &&
@@ -515,27 +597,31 @@ static const CGFloat kBubbleSize = 110.0f;
     NSString *wrongLine = (wrongDetailStr.length > 0) ?
         [NSString stringWithFormat:@"点错：%@", wrongDetailStr] : @"";
 
+    // BUG FIX: use weak self — if user exits within 0.5s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
         NSString *message = [NSString stringWithFormat:
                              @"全部正确！找到了 32 个字\n点错了 %ld 次\n%@\n%@\n已完成 %ld 次",
-                             (long)self.wrongTapCount, wrongLine, evaluation, (long)compCount];
+                             (long)strongSelf.wrongTapCount, wrongLine, evaluation, (long)compCount];
         if (totalWrong > 0) {
             message = [NSString stringWithFormat:
                        @"全部完成！找到了 32 个字\n点错了 %ld 次\n%@\n%@\n已完成 %ld 次",
-                       (long)self.wrongTapCount, wrongLine, evaluation, (long)compCount];
+                       (long)strongSelf.wrongTapCount, wrongLine, evaluation, (long)compCount];
         }
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"通关成功！"
                                                                        message:message
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"再玩一次" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self restartGame];
+            [strongSelf stopConfetti];
+            [strongSelf restartGame];
         }]];
         [alert addAction:[UIAlertAction actionWithTitle:@"返回" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self backBtnClicked];
+            [strongSelf stopConfetti];
+            [strongSelf backBtnClicked];
         }]];
-        [self presentViewController:alert animated:YES completion:nil];
+        [strongSelf presentViewController:alert animated:YES completion:nil];
     });
 }
 
@@ -617,7 +703,9 @@ static const CGFloat kBubbleSize = 110.0f;
 }
 
 - (void)stopConfetti {
-    for (CALayer *layer in self.canvasView.layer.sublayers) {
+    // BUG FIX: copy sublayers before iterating — removeFromSuperlayer mutates the array
+    NSArray *sublayersCopy = [self.canvasView.layer.sublayers copy];
+    for (CALayer *layer in sublayersCopy) {
         if ([layer.name isEqualToString:@"confetti"]) {
             [layer removeFromSuperlayer];
         }

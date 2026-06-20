@@ -449,9 +449,13 @@
     [cell markFound];
 
     // Pick next target after brief pause
+    // BUG FIX: use weak self — if user exits within 0.6s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        self.animating = NO;
-        [self pickNextTarget];
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        strongSelf.animating = NO;
+        [strongSelf pickNextTarget];
     });
 }
 
@@ -462,8 +466,12 @@
     [[AudioManager sharedManager] playSoundNamed:@"cuola.caf"];
     [cell flashWrong];
 
+    // BUG FIX: use weak self
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        self.animating = NO;
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        strongSelf.animating = NO;
     });
 }
 
@@ -486,29 +494,33 @@
     [[NSUserDefaults standardUserDefaults] setObject:details forKey:detailKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
 
+    // BUG FIX: use weak self — if user exits within 0.3s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
         NSString *title, *message;
-        if (self.wrongTapCount == 0) {
+        if (strongSelf.wrongTapCount == 0) {
             title = @"完美通关！";
             message = [NSString stringWithFormat:@"全部答对！你真棒！\n已完成 %ld 次", (long)compCount];
         } else {
             title = @"通关成功！";
             message = [NSString stringWithFormat:@"找到了全部 16/16 个字\n点错了 %ld 次\n已完成 %ld 次",
-                       (long)self.wrongTapCount, (long)compCount];
+                       (long)strongSelf.wrongTapCount, (long)compCount];
         }
 
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
                                                                        message:message
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"再玩一次" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self restartGame];
+            [strongSelf stopConfetti];
+            [strongSelf restartGame];
         }]];
         [alert addAction:[UIAlertAction actionWithTitle:@"返回" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self backBtnClicked];
+            [strongSelf stopConfetti];
+            [strongSelf backBtnClicked];
         }]];
-        [self presentViewController:alert animated:YES completion:nil];
+        [strongSelf presentViewController:alert animated:YES completion:nil];
     });
 }
 
@@ -582,7 +594,9 @@
 }
 
 - (void)stopConfetti {
-    for (CALayer *layer in self.canvasView.layer.sublayers) {
+    // BUG FIX: copy sublayers before iterating — removeFromSuperlayer mutates the array
+    NSArray *sublayersCopy = [self.canvasView.layer.sublayers copy];
+    for (CALayer *layer in sublayersCopy) {
         if ([layer.name isEqualToString:@"confetti"]) {
             [layer removeFromSuperlayer];
         }

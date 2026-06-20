@@ -23,6 +23,7 @@
 @property (strong, nonatomic) UILabel *footerModeLabel;
 @property (strong, nonatomic) SquishyButton *footerStartBtn;
 @property (strong, nonatomic) SquishyButton *footerReturnBtn;
+@property (strong, nonatomic) SquishyButton *footerReplayBtn;
 @property (strong, nonatomic) UILabel *footerProgressLabel;
 @property (strong, nonatomic) UIView *footerView;
 @property (strong, nonatomic) NSMutableArray *footerGameBtns;
@@ -48,6 +49,8 @@
 @property (strong, nonatomic) UIView *popupResultBar;
 @property (assign, nonatomic) NSInteger popupCharIndex;
 
+- (void)updateSavedKey;
+
 @end
 
 @implementation PinyinMainViewController
@@ -67,7 +70,6 @@
 
     self.gameActive = NO;
     self.gameModeEasy = YES;
-    self.savedKey = @"pinyin_easy_record";
     self.remainingIndices = [NSMutableArray array];
     self.currentOrder = [NSMutableArray array];
     self.charResults = [NSMutableDictionary dictionary];
@@ -75,7 +77,6 @@
 
     [self setupUI];
     [self reloadLessonData];
-    [self loadSavedProgress];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -214,6 +215,17 @@
     [self.footerReturnBtn addTarget:self action:@selector(returnBtnClicked) forControlEvents:UIControlEventTouchUpInside];
     [self.footerView addSubview:self.footerReturnBtn];
 
+    self.footerReplayBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(200, 28, 110, 56)
+                                                 backgroundColor:[self primaryContainerColor]
+                                                     shadowColor:[self primaryColor]
+                                                    cornerRadius:16];
+    [self.footerReplayBtn setTitle:@"🔊 重播" forState:UIControlStateNormal];
+    [self.footerReplayBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+    self.footerReplayBtn.titleLabel.font = [UIFont boldSystemFontOfSize:18];
+    self.footerReplayBtn.hidden = YES;
+    [self.footerReplayBtn addTarget:self action:@selector(replayTargetSound) forControlEvents:UIControlEventTouchUpInside];
+    [self.footerView addSubview:self.footerReplayBtn];
+
     [self.canvasView addSubview:self.footerView];
 
     // 4x4 grid area
@@ -267,6 +279,13 @@
 
 #pragma mark - Data
 
+- (void)updateSavedKey {
+    self.savedKey = [NSString stringWithFormat:@"pinyin_progress_b%ld_l%ld_%@",
+                     (long)self.currentBook,
+                     (long)self.currentLesson,
+                     self.gameModeEasy ? @"easy" : @"hard"];
+}
+
 - (void)reloadLessonData {
     // Clear game state when switching lessons
     self.gameActive = NO;
@@ -294,6 +313,7 @@
     }
     self.footerModeLabel.hidden = YES;
     self.footerProgressLabel.hidden = YES;
+    self.footerReplayBtn.hidden = YES;
     self.footerReturnBtn.hidden = YES;
     self.footerReturnBtn.enabled = YES;
 
@@ -315,6 +335,9 @@
         charLbl.text = word.character;
         pyLbl.text = word.pinyinWithTone;
     }
+
+    [self updateSavedKey];
+    [self loadSavedProgress];
 }
 
 - (NSString *)chineseNumberForBook:(NSInteger)book {
@@ -402,13 +425,13 @@
 - (void)startGameWithSender:(UIButton *)sender {
     if (sender.tag == 0) {
         self.gameModeEasy = YES;
-        self.savedKey = @"pinyin_easy_record";
     } else if (sender.tag == 1) {
         self.gameModeEasy = NO;
-        self.savedKey = @"pinyin_hard_record";
     } else {
         return;
     }
+    [self updateSavedKey];
+    [self loadSavedProgress];
     [self beginGame];
 }
 
@@ -418,10 +441,17 @@
     }
 
     self.gameActive = YES;
-    self.correctCount = 0;
-    self.totalAttempts = 0;
+    
+    // Correctly restore correctCount based on remaining indices
+    self.correctCount = 16 - self.remainingIndices.count;
+    
+    // Only reset totalAttempts and charResults if starting a completely new game
+    if (self.remainingIndices.count == 16) {
+        self.totalAttempts = 0;
+        [self.charResults removeAllObjects];
+    }
+    
     self.gameStep = 0;
-    [self.charResults removeAllObjects];
     [self setupGameOrder];
 
     // Build grid order based on mode
@@ -436,7 +466,7 @@
     }
     self.gridOrder = gridOrder;
 
-    // Clean grid
+    // Clean/setup grid
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
         [self removeResultLabelFromCell:self.gridCells[i]];
@@ -447,9 +477,27 @@
         self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
         self.pinyinLabels[i].hidden = NO;
 
-        // Display character based on grid order
+        // Display character based on grid order — BUG FIX: bounds check
         NSInteger wordIdx = [self.gridOrder[i] integerValue];
-        self.charLabels[i].text = self.words[wordIdx].character;
+        if (wordIdx < (NSInteger)self.words.count) {
+            self.charLabels[i].text = self.words[wordIdx].character;
+            
+            // Restore visual feedback for already-answered correct/wrong words
+            id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
+            if (result) {
+                NSString *input = result[@"input"];
+                NSString *status = result[@"result"];
+                if ([status isEqualToString:@"correct"]) {
+                    self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
+                } else {
+                    self.pinyinLabels[i].backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
+                }
+                self.pinyinLabels[i].text = input;
+                self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:24];
+            }
+        } else {
+            self.charLabels[i].text = @"";
+        }
     }
 
     // Show game footer, hide game entry buttons
@@ -459,6 +507,7 @@
     self.footerModeLabel.hidden = NO;
     self.footerModeLabel.text = self.gameModeEasy ? @"拼音游戏(易)" : @"拼音游戏(难)";
     self.footerProgressLabel.hidden = NO;
+    self.footerReplayBtn.hidden = NO;
     self.footerReturnBtn.hidden = NO;
     [self updateFooterProgress];
 
@@ -493,9 +542,29 @@
 }
 
 - (void)playCurrentTargetAudio {
+    // Skip already answered words in the current playlist
+    while (self.gameStep < self.currentOrder.count) {
+        NSInteger idx = [self.currentOrder[self.gameStep] integerValue];
+        if ([self.remainingIndices containsObject:@(idx)]) {
+            break;
+        }
+        self.gameStep++;
+    }
+
     if (self.gameStep >= self.currentOrder.count) {
         self.gameStep = 0;
         [self setupGameOrder];
+    }
+
+    // Double check after potentially rebuilding order
+    if (self.remainingIndices.count == 0) {
+        [self finishGame];
+        return;
+    }
+    
+    if (self.currentOrder.count == 0) {
+        [self finishGame];
+        return;
     }
 
     NSInteger idx = [self.currentOrder[self.gameStep] integerValue];
@@ -504,17 +573,37 @@
     [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
 }
 
+- (void)replayTargetSound {
+    if (self.gameActive && self.currentTargetIdx >= 0 && self.currentTargetIdx < (NSInteger)self.words.count) {
+        WordModel *word = self.words[self.currentTargetIdx];
+        [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
+    }
+}
+
 - (void)gameCellTapped:(NSInteger)idx cell:(UIView *)cell {
     if (self.popupCard) return;
 
     NSInteger wordIdx = [self.gridOrder[idx] integerValue];
+    
+    // Check if they tapped a previously correct/wrong cell
+    id result = self.charResults[@(wordIdx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)wordIdx]];
+    BOOL isPreviouslyWrong = result && [result[@"result"] isEqualToString:@"wrong"];
+    BOOL isPreviouslyCorrect = result && [result[@"result"] isEqualToString:@"correct"];
 
-    if (wordIdx == self.currentTargetIdx) {
-        // Correct character — show popup
+    if (wordIdx == self.currentTargetIdx || isPreviouslyWrong) {
+        // Allow typing if it is the current target OR a previously wrong word
         [self showPopupForCharIndex:wordIdx];
+    } else if (isPreviouslyCorrect) {
+        // Just play the character pronunciation, do NOT count as a wrong attempt
+        if (wordIdx < (NSInteger)self.words.count) {
+            WordModel *word = self.words[wordIdx];
+            [[AudioManager sharedManager] playSoundNamed:[word audioFileName]];
+        }
     } else {
         // Wrong character — feedback
         [[AudioManager sharedManager] playSoundNamed:@"cuola.caf"];
+        // BUG FIX: use weak self to avoid retaining deallocated VC
+        __weak typeof(self) weakSelf = self;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             [[AudioManager sharedManager] playSoundNamed:@"jixujiayou.caf"];
         });
@@ -529,7 +618,7 @@
 
         // Replay current target audio after a short delay
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.8 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            [self playCurrentTargetAudio];
+            [weakSelf playCurrentTargetAudio];
         });
     }
 }
@@ -633,18 +722,19 @@
 - (void)submitPinyin {
     if (!self.popupCard || self.popupCharIndex < 0) return;
 
+    NSInteger idx = self.popupCharIndex;
+    self.popupCharIndex = -1; // Guard against double submission immediately!
+
     NSString *input = self.popupInput.text ?: @"";
     input = [input stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
     input = [input lowercaseString];
     input = [input stringByReplacingOccurrencesOfString:@"v" withString:@"ü"];
     input = [input stringByReplacingOccurrencesOfString:@"u:" withString:@"ü"];
 
-    WordModel *word = self.words[self.popupCharIndex];
+    WordModel *word = self.words[idx];
     NSString *expected = [word.pinyinWithoutTone lowercaseString];
 
     BOOL correct = [input isEqualToString:expected];
-
-    NSInteger idx = self.popupCharIndex; // word index
 
     // Find grid position where this word is displayed
     NSInteger gridPos = 0;
@@ -671,7 +761,10 @@
 
         self.charResults[@(idx)] = @{@"result": @"correct", @"input": input};
         [self.remainingIndices removeObject:@(idx)];
-        self.gameStep++;
+        
+        if (idx == self.currentTargetIdx) {
+            self.gameStep++;
+        }
     } else {
         self.popupResultBar.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
         [[AudioManager sharedManager] playSoundNamed:@"jixujiayou.caf"];
@@ -682,13 +775,20 @@
         pyLbl.font = [UIFont boldSystemFontOfSize:24];
 
         self.charResults[@(idx)] = @{@"result": @"wrong", @"input": input};
-        self.gameStep++;
+        
+        if (idx == self.currentTargetIdx) {
+            self.gameStep++;
+        }
     }
 
     [self updateFooterProgress];
 
+    // BUG FIX: use weak self — if user exits game in 2s window VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        [self closePopupAndContinue];
+        PinyinMainViewController *strongSelf = weakSelf;
+        if (!strongSelf || !strongSelf.popupCard) return; // already dismissed
+        [strongSelf closePopupAndContinue];
     });
 }
 
@@ -755,15 +855,16 @@
 
     [self stopConfetti];
 
-    // Restore grid to normal
+    // Restore grid to normal — BUG FIX: safe bounds check (words may be < 16)
     for (NSInteger i = 0; i < 16; i++) {
         self.charLabels[i].backgroundColor = [UIColor clearColor];
-        self.charLabels[i].text = self.words[i] ? self.words[i].character : @"";
+        WordModel *w = (i < (NSInteger)self.words.count) ? self.words[i] : nil;
+        self.charLabels[i].text = w ? w.character : @"";
         self.underlineViews[i].hidden = !self.showingPinyin;
         self.underlineViews[i].backgroundColor = [UIColor lightGrayColor];
         [self removeResultLabelFromCell:self.gridCells[i]];
         self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
-        self.pinyinLabels[i].text = self.words[i] ? [self.words[i] pinyinWithTone] : @"";
+        self.pinyinLabels[i].text = w ? [w pinyinWithTone] : @"";
         self.pinyinLabels[i].font = [UIFont boldSystemFontOfSize:30];
         self.pinyinLabels[i].hidden = !self.showingPinyin;
     }
@@ -774,6 +875,7 @@
     }
     self.footerModeLabel.hidden = YES;
     self.footerProgressLabel.hidden = YES;
+    self.footerReplayBtn.hidden = YES;
     self.footerReturnBtn.hidden = YES;
     self.footerReturnBtn.enabled = YES;
 
@@ -815,11 +917,18 @@
     for (NSNumber *n in self.remainingIndices) {
         [remaining addObject:n];
     }
+    // BUG FIX: NSUserDefaults plist only supports NSString keys.
+    // charResults uses @(idx) NSNumber keys → convert to string keys before saving.
+    NSMutableDictionary *serializableResults = [NSMutableDictionary dictionary];
+    for (id key in self.charResults) {
+        NSString *strKey = [key isKindOfClass:[NSString class]] ? key : [key stringValue];
+        serializableResults[strKey] = self.charResults[key];
+    }
     NSDictionary *data = @{
         @"correct": @(self.correctCount),
         @"totalAttempts": @(self.totalAttempts),
         @"remaining": remaining,
-        @"results": self.charResults
+        @"results": serializableResults
     };
     [[NSUserDefaults standardUserDefaults] setObject:data forKey:self.savedKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
@@ -838,7 +947,9 @@
     if (self.remainingIndices.count == 0) {
         [self resetGameState];
     }
-    self.charResults = [data[@"results"] mutableCopy] ?: [NSMutableDictionary dictionary];
+    // BUG FIX: saved keys are NSString (converted in saveGameProgress), keep as-is
+    NSDictionary *savedResults = data[@"results"];
+    self.charResults = savedResults ? [savedResults mutableCopy] : [NSMutableDictionary dictionary];
 
     // Only update footer label with saved progress text, do NOT touch grid UI
     [self updateFooterModeLabel];
@@ -900,7 +1011,10 @@
 }
 
 - (void)stopConfetti {
-    for (CALayer *layer in self.canvasView.layer.sublayers) {
+    // BUG FIX: copy sublayers before iterating — removeFromSuperlayer mutates the array
+    // causing "Collection was mutated while being enumerated" crash
+    NSArray *sublayersCopy = [self.canvasView.layer.sublayers copy];
+    for (CALayer *layer in sublayersCopy) {
         if ([layer.name isEqualToString:@"confetti"]) {
             [layer removeFromSuperlayer];
         }

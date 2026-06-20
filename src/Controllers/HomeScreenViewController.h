@@ -1,5 +1,5 @@
-#import <UIKit/UIKit.h>
+#import "BaseViewController.h"
 
-@interface HomeScreenViewController : UIViewController
+@interface HomeScreenViewController : BaseViewController
 
 @end

@@ -2,6 +2,7 @@
 #import "AppNavigationController.h"
 #import "MainScreenViewController.h"
 #import "PinyinMainViewController.h"
+#import "SquishyButton.h"
 
 @interface HomeScreenViewController ()
 
@@ -11,50 +12,108 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor colorWithRed:246.0f/255.0f green:249.0f/255.0f blue:244.0f/255.0f alpha:1.0f];
+    
+    // Use the base class canvasView for unified responsive scaling
+    self.canvasView.backgroundColor = [self backgroundColor];
 
-    UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 768, 1024)];
-    container.backgroundColor = [UIColor clearColor];
-    [self.view addSubview:container];
+    // 1. Title Banner Card
+    UIView *titleCard = [[UIView alloc] initWithFrame:CGRectMake(124.0f, 100.0f, 520.0f, 130.0f)];
+    titleCard.backgroundColor = [self surfaceContainerColor];
+    titleCard.layer.cornerRadius = 24.0f;
+    
+    // Soft shadow for title
+    titleCard.layer.shadowColor = [self primaryColor].CGColor;
+    titleCard.layer.shadowOpacity = 0.08f;
+    titleCard.layer.shadowRadius = 8.0f;
+    titleCard.layer.shadowOffset = CGSizeMake(0, 4.0f);
+    
+    UILabel *mainTitle = [[UILabel alloc] initWithFrame:CGRectMake(0, 24.0f, 520.0f, 44.0f)];
+    mainTitle.text = @"谷老师中文乐园";
+    mainTitle.font = [UIFont boldSystemFontOfSize:32.0f];
+    mainTitle.textColor = [self primaryColor];
+    mainTitle.textAlignment = NSTextAlignmentCenter;
+    [titleCard addSubview:mainTitle];
+    
+    UILabel *subTitle = [[UILabel alloc] initWithFrame:CGRectMake(0, 76.0f, 520.0f, 24.0f)];
+    subTitle.text = @"—— 识字与拼音趣味学习 ——";
+    subTitle.font = [self fontWithName:@"Plus Jakarta Sans" size:15.0f];
+    subTitle.textColor = [self onSurfaceVariantColor];
+    subTitle.textAlignment = NSTextAlignmentCenter;
+    [titleCard addSubview:subTitle];
+    
+    [self.canvasView addSubview:titleCard];
 
-    // 识字 button
-    UIButton *shiziBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    shiziBtn.frame = CGRectMake(184, 240, 400, 260);
-    shiziBtn.backgroundColor = [UIColor colorWithRed:200.0f/255.0f green:230.0f/255.0f blue:200.0f/255.0f alpha:1.0f];
-    shiziBtn.layer.cornerRadius = 24;
-    [shiziBtn setTitle:@"📖 谷老师 识字" forState:UIControlStateNormal];
-    [shiziBtn setTitleColor:[UIColor colorWithRed:30.0f/255.0f green:50.0f/255.0f blue:40.0f/255.0f alpha:1.0f] forState:UIControlStateNormal];
-    shiziBtn.titleLabel.font = [UIFont fontWithName:@"Georgia" size:36];
-    shiziBtn.titleLabel.numberOfLines = 0;
-    shiziBtn.titleLabel.textAlignment = NSTextAlignmentCenter;
+    // 2. Character Recognition Card (识字乐园)
+    SquishyButton *shiziBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(124.0f, 280.0f, 520.0f, 220.0f)
+                                                   backgroundColor:[self surfaceContainerLowestColor]
+                                                       shadowColor:[self primaryColor]
+                                                      cornerRadius:28.0f];
     [shiziBtn addTarget:self action:@selector(shiziTapped) forControlEvents:UIControlEventTouchUpInside];
-    [container addSubview:shiziBtn];
+    
+    UILabel *shiziEmoji = [[UILabel alloc] initWithFrame:CGRectMake(0, 30.0f, 520.0f, 70.0f)];
+    shiziEmoji.text = @"🐼";
+    shiziEmoji.font = [UIFont systemFontOfSize:64.0f];
+    shiziEmoji.textAlignment = NSTextAlignmentCenter;
+    shiziEmoji.userInteractionEnabled = NO;
+    [shiziBtn addSubview:shiziEmoji];
+    
+    UILabel *shiziTitle = [[UILabel alloc] initWithFrame:CGRectMake(0, 115.0f, 520.0f, 40.0f)];
+    shiziTitle.text = @"识 字 乐 园";
+    shiziTitle.font = [UIFont boldSystemFontOfSize:26.0f];
+    shiziTitle.textColor = [self primaryColor];
+    shiziTitle.textAlignment = NSTextAlignmentCenter;
+    shiziTitle.userInteractionEnabled = NO;
+    [shiziBtn addSubview:shiziTitle];
+    
+    UILabel *shiziDesc = [[UILabel alloc] initWithFrame:CGRectMake(0, 165.0f, 520.0f, 25.0f)];
+    shiziDesc.text = @"认读汉字、笔画演示、拼字/跳字趣味游戏";
+    shiziDesc.font = [self fontWithName:@"Plus Jakarta Sans" size:15.0f];
+    shiziDesc.textColor = [self onSurfaceVariantColor];
+    shiziDesc.textAlignment = NSTextAlignmentCenter;
+    shiziDesc.userInteractionEnabled = NO;
+    [shiziBtn addSubview:shiziDesc];
+    
+    [self.canvasView addSubview:shiziBtn];
 
-    // Separator
-    UIView *sep = [[UIView alloc] initWithFrame:CGRectMake(284, 530, 200, 1)];
-    sep.backgroundColor = [UIColor colorWithWhite:0.7 alpha:0.4];
-    [container addSubview:sep];
-
-    // Pinyin button
-    UIButton *pinyinBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    pinyinBtn.frame = CGRectMake(184, 560, 400, 260);
-    pinyinBtn.backgroundColor = [UIColor colorWithRed:230.0f/255.0f green:220.0f/255.0f blue:250.0f/255.0f alpha:1.0f];
-    pinyinBtn.layer.cornerRadius = 24;
-    [pinyinBtn setTitle:@"🔤 谷老师 Pinyin" forState:UIControlStateNormal];
-    [pinyinBtn setTitleColor:[UIColor colorWithRed:30.0f/255.0f green:50.0f/255.0f blue:40.0f/255.0f alpha:1.0f] forState:UIControlStateNormal];
-    pinyinBtn.titleLabel.font = [UIFont fontWithName:@"Georgia" size:36];
-    pinyinBtn.titleLabel.numberOfLines = 0;
-    pinyinBtn.titleLabel.textAlignment = NSTextAlignmentCenter;
+    // 3. Pinyin Card (拼音闯关)
+    SquishyButton *pinyinBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(124.0f, 550.0f, 520.0f, 220.0f)
+                                                    backgroundColor:[self surfaceContainerLowestColor]
+                                                        shadowColor:[self secondaryContainerColor]
+                                                       cornerRadius:28.0f];
     [pinyinBtn addTarget:self action:@selector(pinyinTapped) forControlEvents:UIControlEventTouchUpInside];
-    [container addSubview:pinyinBtn];
+    
+    UILabel *pinyinEmoji = [[UILabel alloc] initWithFrame:CGRectMake(0, 30.0f, 520.0f, 70.0f)];
+    pinyinEmoji.text = @"🎈";
+    pinyinEmoji.font = [UIFont systemFontOfSize:64.0f];
+    pinyinEmoji.textAlignment = NSTextAlignmentCenter;
+    pinyinEmoji.userInteractionEnabled = NO;
+    [pinyinBtn addSubview:pinyinEmoji];
+    
+    UILabel *pinyinTitle = [[UILabel alloc] initWithFrame:CGRectMake(0, 115.0f, 520.0f, 40.0f)];
+    pinyinTitle.text = @"拼 音 闯 关";
+    pinyinTitle.font = [UIFont boldSystemFontOfSize:26.0f];
+    pinyinTitle.textColor = [self secondaryContainerColor];
+    pinyinTitle.textAlignment = NSTextAlignmentCenter;
+    pinyinTitle.userInteractionEnabled = NO;
+    [pinyinBtn addSubview:pinyinTitle];
+    
+    UILabel *pinyinDesc = [[UILabel alloc] initWithFrame:CGRectMake(0, 165.0f, 520.0f, 25.0f)];
+    pinyinDesc.text = @"声调认读与键盘拼写输入挑战";
+    pinyinDesc.font = [self fontWithName:@"Plus Jakarta Sans" size:15.0f];
+    pinyinDesc.textColor = [self onSurfaceVariantColor];
+    pinyinDesc.textAlignment = NSTextAlignmentCenter;
+    pinyinDesc.userInteractionEnabled = NO;
+    [pinyinBtn addSubview:pinyinDesc];
+    
+    [self.canvasView addSubview:pinyinBtn];
 
-    // Version
-    UILabel *verLabel = [[UILabel alloc] initWithFrame:CGRectMake(284, 880, 200, 30)];
-    verLabel.text = @"v1.0";
+    // 4. Version Info
+    UILabel *verLabel = [[UILabel alloc] initWithFrame:CGRectMake(124.0f, 880.0f, 520.0f, 30.0f)];
+    verLabel.text = @"儿童中文学习乐园 v1.0";
+    verLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:14.0f];
+    verLabel.textColor = [self onSurfaceVariantColor];
     verLabel.textAlignment = NSTextAlignmentCenter;
-    verLabel.font = [UIFont systemFontOfSize:14];
-    verLabel.textColor = [UIColor lightGrayColor];
-    [container addSubview:verLabel];
+    [self.canvasView addSubview:verLabel];
 }
 
 - (void)shiziTapped {

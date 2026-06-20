@@ -497,10 +497,15 @@ static const void *kWordModelKey = &kWordModelKey;
                 card.layer.borderWidth = 3.0f;
                 card.layer.borderColor = [UIColor redColor].CGColor;
             }];
+            // BUG FIX: use weak self — if user exits within 1.2s VC may be deallocated
+            __weak UIButton *weakCard = card;
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [self sendCardBackToBench:card];
-                card.layer.borderWidth = 0.0f;
-                card.layer.borderColor = [UIColor clearColor].CGColor;
+                __strong typeof(self) strongSelf = self;
+                __strong UIButton *strongCard = weakCard;
+                if (!strongSelf || !strongCard) return;
+                [strongSelf sendCardBackToBench:strongCard];
+                strongCard.layer.borderWidth = 0.0f;
+                strongCard.layer.borderColor = [UIColor clearColor].CGColor;
             });
             [self.slotOccupants removeObjectForKey:@(i)];
         }
@@ -538,19 +543,23 @@ static const void *kWordModelKey = &kWordModelKey;
     [self showConfetti];
 
     // Show alert with delay so sound plays first
+    // BUG FIX: use weak self — if user exits within 1.2s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"恭喜你！"
                                                                        message:[NSString stringWithFormat:@"宝贝，全对了，你真棒！\n已完成 %ld 次", (long)count]
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"再玩一次" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self buildGameUI];
+            [strongSelf stopConfetti];
+            [strongSelf buildGameUI];
         }]];
         [alert addAction:[UIAlertAction actionWithTitle:@"返回" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-            [self stopConfetti];
-            [self backBtnClicked];
+            [strongSelf stopConfetti];
+            [strongSelf backBtnClicked];
         }]];
-        [self presentViewController:alert animated:YES completion:nil];
+        [strongSelf presentViewController:alert animated:YES completion:nil];
     });
 }
 
@@ -610,7 +619,9 @@ static const void *kWordModelKey = &kWordModelKey;
 }
 
 - (void)stopConfetti {
-    for (CALayer *layer in self.canvasView.layer.sublayers) {
+    // BUG FIX: copy sublayers before iterating — removeFromSuperlayer mutates the array
+    NSArray *sublayersCopy = [self.canvasView.layer.sublayers copy];
+    for (CALayer *layer in sublayersCopy) {
         if ([layer.name isEqualToString:@"confetti"]) {
             [layer removeFromSuperlayer];
         }

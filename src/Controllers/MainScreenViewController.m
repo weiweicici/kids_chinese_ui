@@ -160,7 +160,7 @@
     
     // Tab 2: 跳字游戏
     SquishyButton *tab2 = [[SquishyButton alloc] initWithFrame:CGRectMake(186.0f, 18.0f, 130.0f, 64.0f)
-                                               backgroundColor:[self secondaryContainerColor]
+                                               backgroundColor:[self primaryContainerColor]
                                                    shadowColor:[self primaryColor]
                                                   cornerRadius:16.0f];
     [tab2 setTitle:@"🫧 跳字游戏" forState:UIControlStateNormal];

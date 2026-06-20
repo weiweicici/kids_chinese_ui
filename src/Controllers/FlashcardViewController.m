@@ -419,15 +419,19 @@
 
 - (void)wrongEvaluationClicked {
     self.statusLabel.text = @"❌ 下次继续努力！";
+    // BUG FIX: use weak self — if user exits within 1s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self nextCardClicked];
+        [weakSelf nextCardClicked];
     });
 }
 
 - (void)correctEvaluationClicked {
     self.statusLabel.text = @"🎉 太棒了！回答正确！";
+    // BUG FIX: use weak self — if user exits within 1s VC may be deallocated
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self nextCardClicked];
+        [weakSelf nextCardClicked];
     });
 }
 
