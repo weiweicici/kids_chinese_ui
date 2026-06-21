@@ -320,6 +320,16 @@
     [self.charResults removeAllObjects];
     [self.userInputs removeAllObjects];
     [self resetGameState];
+    self.showingPinyin = NO;
+    self.pinyinBtn.alpha = 1.0f;
+    if (self.gameDimView) {
+        [self.gameDimView removeFromSuperview];
+        self.gameDimView = nil;
+    }
+    if (self.popupCard) {
+        [self.popupCard removeFromSuperview];
+        self.popupCard = nil;
+    }
 
     // Clean grid UI
     for (NSInteger i = 0; i < 16; i++) {
@@ -327,6 +337,7 @@
         cell.backgroundColor = [UIColor clearColor];
         [self removeResultLabelFromCell:cell];
         self.underlineViews[i].hidden = !self.showingPinyin;
+        self.pinyinLabels[i].hidden = !self.showingPinyin;
         self.pinyinLabels[i].backgroundColor = [UIColor clearColor];
         self.pinyinLabels[i].text = @"";
     }
@@ -1001,7 +1012,11 @@
     }
     }
 
-    // Dim overlay
+    // Dim overlay — remove old first to prevent accumulation
+    if (self.gameDimView) {
+        [self.gameDimView removeFromSuperview];
+        self.gameDimView = nil;
+    }
     self.gameDimView = [[UIView alloc] initWithFrame:self.canvasView.bounds];
     self.gameDimView.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.3f];
     self.gameDimView.userInteractionEnabled = NO;
