@@ -58,6 +58,9 @@ python3 deploy.py --logs              # 仅查看日志
 | `src/Core/GifPlayerView.m` | GIF 播放（UIImage 帧解析） |
 | `src/Views/RiceCellView.h/m` | 米字格虚线单元格视图（主屏幕 + Game1 共用） |
 | `src/Views/SquishyButton.h/m` | 圆角阴影按钮组件 |
+| `src/Core/SupabaseClient.m/h` | Supabase REST API 封装 + Keychain JWT + auth(注册/登录) |
+| `src/Controllers/LoginViewController.m/h` | 登录/注册页（邮箱+密码，自动创建 profiles + registration_requests） |
+| `src/Controllers/AdminViewController.m/h` | 管理后台（审批列表，3 选项卡） |
 | `compile.py` | 构建脚本（clang armv7） |
 | `deploy.py` | 部署 + 日志脚本 |
 | `serve.py` | HTTP 服务器（保留备用） |
@@ -198,9 +201,10 @@ python3 deploy.py --logs              # 仅查看日志
 2. 写 `SupabaseClient.m/h`（封装注册、登录、CRUD）✅ 已完成
 3. 写 `LoginViewController.m/h` ✅ 已完成
 4. 改 `AppDelegate.m` 启动流程 ✅ 已完成
-5. 写 `AdminViewController.m/h`
-6. 改 MainScreen/Flashcard/Game1/Game2 加进度读写
-7. 编译测试 → 部署
+5. 写 `AdminViewController.m/h` ✅ 已完成
+6. 改 HomeScreen 加管理入口（role==admin 显示）✅ 已完成
+7. 改 MainScreen/Flashcard/Game1/Game2 加进度读写
+8. 编译测试 → 部署
 
 ## 关键约束
 - **不要碰 UI 布局代码**（用户花大量时间调整过）
