@@ -179,15 +179,14 @@ python3 deploy.py --logs              # 仅查看日志
 **新增文件：**
 | 文件 | 用途 |
 |---|---|
-| `src/Core/SupabaseClient.m/h` | 封装 NSURLSession 调用 Supabase REST API + JWT 管理（Keychain）+ signUp/signIn auth 方法 |
-| `src/Controllers/LoginViewController.m/h` | 登录/注册页（邮箱+密码，自动创建 profiles + registration_requests） |
-| `src/Controllers/AdminViewController.m/h` | 管理后台（审批列表） — 待构建 |
+| `src/Core/SupabaseClient.m/h` | 封装 NSURLSession 调用 Supabase REST API + JWT 管理（Keychain） |
+| `src/Controllers/LoginViewController.m/h` | 登录/注册页 |
+| `src/Controllers/AdminViewController.m/h` | 管理后台（审批列表） |
 
 **修改文件：**
 | 文件 | 改动 |
 |---|---|
-| `AppDelegate.m` | 启动时配置 SupabaseClient；检查 JWT token；无 token 显示 LoginVC，有 token 正常进 HomeScreen（后台异步 verify token/profile） |
-| `compile.py` | 链接阶段加入 `-framework Security`（Keychain 支持） |
+| `AppDelegate.m` | 启动时检查 JWT token；无 token 显示 LoginVC，有 token 正常进 MainScreen |
 | `MainScreenViewController.m` | `viewDidAppear:` 拉取 `feature='main'` 进度定位；切换课后调用 API 保存 |
 | `FlashcardViewController.m` | 退出/完成时保存 `word_index` |
 | `Game1ViewController.m` | `viewDidAppear:` 拉 `feature='game1'` 进度；退出时保存 |
@@ -195,9 +194,9 @@ python3 deploy.py --logs              # 仅查看日志
 
 ### 实施步骤
 1. Supabase 建项目 → 建表 → 设 RLS 策略
-2. 写 `SupabaseClient.m/h`（封装注册、登录、CRUD）✅ 已完成
-3. 写 `LoginViewController.m/h` ✅ 已完成
-4. 改 `AppDelegate.m` 启动流程 ✅ 已完成
+2. 写 `SupabaseClient.m/h`（封装注册、登录、CRUD）
+3. 写 `LoginViewController.m/h`
+4. 改 `AppDelegate.m` 启动流程
 5. 写 `AdminViewController.m/h`
 6. 改 MainScreen/Flashcard/Game1/Game2 加进度读写
 7. 编译测试 → 部署

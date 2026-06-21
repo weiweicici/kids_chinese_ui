@@ -77,8 +77,7 @@ def link_binary(object_files):
         "-framework", "AVFoundation",
         "-framework", "ImageIO",
         "-framework", "QuartzCore",
-        "-framework", "CoreGraphics",
-        "-framework", "Security"
+        "-framework", "CoreGraphics"
     ] + object_files + ["-o", exec_path]
     
     result = subprocess.run(cmd, capture_output=True, text=True)
