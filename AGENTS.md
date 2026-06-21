@@ -191,10 +191,10 @@ python3 deploy.py --logs              # 仅查看日志
 |---|---|
 | `AppDelegate.m` | 启动时配置 SupabaseClient；检查 JWT token；无 token 显示 LoginVC，有 token 正常进 HomeScreen（后台异步 verify token/profile） |
 | `compile.py` | 链接阶段加入 `-framework Security`（Keychain 支持） |
-| `MainScreenViewController.m` | `viewDidAppear:` 拉取 `feature='main'` 进度定位；切换课后调用 API 保存 |
-| `FlashcardViewController.m` | 退出/完成时保存 `word_index` |
-| `Game1ViewController.m` | `viewDidAppear:` 拉 `feature='game1'` 进度；退出时保存 |
-| `Game2ViewController.m` | 同上 |
+| `MainScreenViewController.m` | `pickerLessonSelected:` 保存 `feature='main'` 进度到 Supabase |
+| `FlashcardViewController.m` | 退出/完成时保存 `feature='flashcard'` 进度（含 `word_index`） |
+| `Game1ViewController.m` | 完成时保存 `feature='game1'` 进度 |
+| `Game2ViewController.m` | 完成时保存 `feature='game2'` 进度 |
 
 ### 实施步骤
 1. Supabase 建项目 → 建表 → 设 RLS 策略
@@ -203,8 +203,8 @@ python3 deploy.py --logs              # 仅查看日志
 4. 改 `AppDelegate.m` 启动流程 ✅ 已完成
 5. 写 `AdminViewController.m/h` ✅ 已完成
 6. 改 HomeScreen 加管理入口（role==admin 显示）✅ 已完成
-7. 改 MainScreen/Flashcard/Game1/Game2 加进度读写
-8. 编译测试 → 部署
+7. 改 MainScreen/Flashcard/Game1/Game2 加进度读写 ✅ 已完成
+8. 编译测试 → 部署 ✅ 编译通过（main + no-backend 双分支）
 
 ## 关键约束
 - **不要碰 UI 布局代码**（用户花大量时间调整过）
