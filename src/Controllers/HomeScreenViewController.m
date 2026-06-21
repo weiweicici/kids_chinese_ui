@@ -2,6 +2,8 @@
 #import "AppNavigationController.h"
 #import "MainScreenViewController.h"
 #import "PinyinMainViewController.h"
+#import "AdminViewController.h"
+#import "SupabaseClient.h"
 #import "SquishyButton.h"
 
 @interface HomeScreenViewController ()
@@ -114,6 +116,20 @@
     verLabel.textColor = [self onSurfaceVariantColor];
     verLabel.textAlignment = NSTextAlignmentCenter;
     [self.canvasView addSubview:verLabel];
+
+    // 5. Admin button (only visible when role == admin)
+    NSString *role = [[SupabaseClient sharedClient] getCachedRole];
+    if ([role isEqualToString:@"admin"]) {
+        SquishyButton *adminBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(640.0f, 30.0f, 100.0f, 40.0f)
+                                                       backgroundColor:[self secondaryContainerColor]
+                                                           shadowColor:[self colorFromHex:@"#d47d1a"]
+                                                          cornerRadius:12.0f];
+        [adminBtn setTitle:@"管理" forState:UIControlStateNormal];
+        [adminBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        adminBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16.0f];
+        [adminBtn addTarget:self action:@selector(adminTapped) forControlEvents:UIControlEventTouchUpInside];
+        [self.canvasView addSubview:adminBtn];
+    }
 }
 
 - (void)shiziTapped {
@@ -123,6 +139,11 @@
 
 - (void)pinyinTapped {
     PinyinMainViewController *vc = [[PinyinMainViewController alloc] init];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)adminTapped {
+    AdminViewController *vc = [[AdminViewController alloc] init];
     [self.navigationController pushViewController:vc animated:YES];
 }
 
