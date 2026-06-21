@@ -1890,7 +1890,9 @@
             [self.pickerOverlay removeFromSuperview];
             self.pickerOverlay = nil;
             // Restore footerView — hidden in showLessonPicker
-            self.footerView.hidden = NO;
+            if (!self.spellingActive) {
+                self.footerView.hidden = NO;
+            }
         }];
     }
 }

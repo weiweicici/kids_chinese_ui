@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Kids Chinese UI — 后端集成实施方案</title>
+<style>
+@page { margin: 18mm 16mm; size: A4; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Segoe UI', system-ui, sans-serif;
+  font-size: 11pt;
+  line-height: 1.65;
+  color: #1a1d21;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+h1 { font-size: 18pt; margin: 8pt 0 4pt; color: #006b58; border-bottom: 2px solid #006b58; padding-bottom: 4pt; }
+h2 { font-size: 14pt; margin: 16pt 0 6pt; color: #006b58; }
+h3 { font-size: 12pt; margin: 12pt 0 4pt; color: #3e4945; }
+p { margin: 4pt 0; }
+table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 9.5pt; }
+th { background: #e8efec; color: #161d1b; padding: 5pt 6pt; text-align: left; font-weight: 600; border: 0.5px solid #c0c8c4; }
+td { padding: 4pt 6pt; border: 0.5px solid #d0d8d4; vertical-align: top; }
+code { font-family: 'SF Mono', 'Menlo', 'Courier New', monospace; font-size: 9pt; background: #f0f4f1; padding: 1pt 4pt; border-radius: 2pt; }
+pre { font-family: 'SF Mono', 'Menlo', 'Courier New', monospace; font-size: 8.5pt; background: #f4fbf8; padding: 8pt 10pt; border-radius: 4pt; border: 0.5px solid #d0d8d4; overflow-x: auto; line-height: 1.4; margin: 6pt 0; }
+pre code { background: none; padding: 0; }
+ul, ol { margin: 4pt 0 4pt 16pt; }
+li { margin: 2pt 0; }
+.badge { display: inline-block; font-size: 8pt; font-weight: 600; padding: 1pt 6pt; border-radius: 3pt; margin-right: 3pt; }
+.bg-green { background: #e8f5e9; color: #1b5e20; }
+.bg-red { background: #ffebee; color: #b71c1c; }
+.bg-blue { background: #e3f2fd; color: #0d47a1; }
+.bg-yellow { background: #fff8e1; color: #e65100; }
+.constraint-box {
+  background: #fff8e1; border-left: 3px solid #f57f17; padding: 8pt 10pt; margin: 8pt 0; font-size: 10pt;
+}
+.info-box {
+  background: #e8f5e9; border-left: 3px solid #2e7d32; padding: 8pt 10pt; margin: 8pt 0; font-size: 10pt;
+}
+.warn-box {
+  background: #ffebee; border-left: 3px solid #c62828; padding: 8pt 10pt; margin: 8pt 0; font-size: 10pt;
+}
+.step { display: flex; gap: 6pt; margin: 3pt 0; }
+.step-num { font-weight: 700; color: #006b58; min-width: 20pt; }
+.section-break { border: none; border-top: 1px solid #d0d8d4; margin: 16pt 0; }
+label,input,button { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Kids Chinese UI — 后端集成实施方案</h1>
+<p style="font-size:9pt;color:#8899aa;margin-bottom:12pt">目标设备: iPad Mini 1 · iOS 9.3.5 · armv7 · 512MB RAM · 零第三方库 · 2026-06-20</p>
+
+<div class="constraint-box">
+<strong>⚠ 核心约束</strong><br>
+1. 只能用 <code>NSURLSession</code> + <code>NSJSONSerialization</code>（iOS 9 无原生 Codable / Combine）<br>
+2. 不能用 ZIP 解压库（armv7 无原生压缩 API，手写 zlib 极易 OOM）<br>
+3. JWT 必须存 Keychain（<code>kSecClassGenericPassword</code>），<strong>不能</strong>存 NSUserDefaults<br>
+4. 管理后台必须在 App 内实现，不用网页<br>
+5. 服务端 API 响应必须分页（<code>LIMIT 20</code>），防止大 JSON 撑爆 512MB<br>
+6. UI 布局代码不动
+</div>
+
+<!-- ============================================================ -->
+<h1>一、数据库 Schema</h1>
+
+<h2>1.1 用户档案</h2>
+<pre><code>CREATE TABLE profiles (
+  id          uuid PRIMARY KEY REFERENCES auth.users(id),
+  username    text UNIQUE NOT NULL,
+  real_name   text,
+  role        text CHECK (role IN ('student','teacher','admin')),
+  is_approved boolean DEFAULT false,
+  created_at  timestamptz DEFAULT now()
+);</code></pre>
+
+<h2>1.2 班级/师生绑定</h2>
+<pre><code>CREATE TABLE class_assignments (
+  id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  student_id uuid REFERENCES profiles(id),
+  teacher_id uuid REFERENCES profiles(id),
+  created_at timestamptz DEFAULT now()
+);</code></pre>
+
+<h2>1.3 学习进度</h2>
+<pre><code>CREATE TABLE user_progress (
+  id             uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id        uuid REFERENCES auth.users(id),
+  feature        text CHECK (feature IN ('main','game1','game2','game3','fullspell')),
+  book_number    int,
+  lesson_number  int,
+  correct_count  int DEFAULT 0,
+  total_attempts int DEFAULT 0,
+  updated_at     timestamptz DEFAULT now(),
+  UNIQUE (user_id, feature, book_number, lesson_number)
+);</code></pre>
+
+<h2>1.4 注册审批</h2>
+<pre><code>CREATE TABLE registration_requests (
+  id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     uuid REFERENCES auth.users(id),
+  status      text CHECK (status IN ('pending','approved','rejected')),
+  approved_by uuid REFERENCES profiles(id),
+  created_at  timestamptz DEFAULT now()
+);</code></pre>
+
+<h2>1.5 课程发布</h2>
+<pre><code>CREATE TABLE course_releases (
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  book_number     int,
+  lesson_number   int,
+  lesson_title    text,
+  is_active       boolean DEFAULT true,
+  plist_url       text,   -- Supabase Storage URL for session_{b}-{l}.plist
+  audio_urls      jsonb,  -- {"1":"{url}","2":"{url}",...,"16":"{url}"}
+  version         int DEFAULT 1,
+  updated_by      uuid REFERENCES profiles(id),
+  created_at      timestamptz DEFAULT now(),
+  updated_at      timestamptz DEFAULT now()
+);</code></pre>
+
+<div class="info-box">
+<strong>设计说明</strong>：<code>course_releases</code> 表替代传统的 ZIP 包。每次 Admin 创建新课后，将 plist 和 MP3 逐个上传到 Supabase Storage，URL 存入此表。App 按需逐文件下载。
+</div>
+
+<p style="page-break-before:always"></p>
+
+<!-- ============================================================ -->
+<h1>二、App 启动流程（AppDelegate.m 改造）</h1>
+
+<pre><code>didFinishLaunchingWithOptions:
+│
+├─ Keychain 有 JWT?
+│   ├─ NO  → rootVC = LoginViewController
+│   └─ YES → GET /rest/v1/profiles?id=eq.{user_id}
+│             │
+│             ├─ student + is_approved == true
+│             │   └─ rootVC = HomeScreenViewController
+│             │
+│             ├─ student + is_approved == false
+│             │   └─ 弹窗 "等待老师/管理员审核" → 停留在 Login
+│             │
+│             └─ teacher / admin
+│                 └─ rootVC = AdminViewController
+│
+└─ 后台启动课程检查（不影响 UI）
+    GET /rest/v1/course_releases?version=gt.{localVersion}
+    有新课程 → push 到下载队列（见第四章）</code></pre>
+
+<div class="warn-box">
+<strong>⚠ 关键注意</strong>：JWT 过期处理。每次 API 请求返回 401 时，<strong>不能自动刷新</strong>——iPad Mini 1 的 A5 单核芯片执行 Token 刷新请求期间 UI 会卡死。方案：返回 401 时直接退到 LoginViewController，让用户手动重新登录。
+</div>
+
+<!-- ============================================================ -->
+<h1>三、iOS 网络层（SupabaseClient.m）</h1>
+
+<h2>3.1 架构</h2>
+<p>单例封装，全部手写 <code>NSURLSession</code>：</p>
+<pre><code>@interface SupabaseClient : NSObject
++ (instancetype)sharedClient;
+- (void)GET:(NSString *)path completion:(void(^)(NSDictionary *, NSError *))completion;
+- (void)POST:(NSString *)path body:(NSDictionary *)body completion:(void(^)(NSDictionary *, NSError *))completion;
+- (void)downloadFile:(NSString *)url to:(NSString *)destPath completion:(void(^)(BOOL))completion;
+- (void)saveToken:(NSString *)jwt;
+- (NSString *)getToken;
+- (void)clearToken;
+@end</code></pre>
+
+<h2>3.2 关键实现细节</h2>
+<ul>
+  <li><strong>Token 注入</strong>：每个请求在 <code>URLRequest</code> 的 <code>setValue:forHTTPHeaderField:</code> 自动添加 <code>Authorization: Bearer &lt;JWT&gt;</code></li>
+  <li><strong>Keychain 存储</strong>：<code>SecItemAdd</code> / <code>SecItemCopyMatching</code> 操作，使用 <code>kSecClassGenericPassword</code> + <code>kSecAttrService:@"com.kidschinese.supabase"</code></li>
+  <li><strong>分页硬限</strong>：所有 GET 请求 URL 自动追加 <code>&limit=20</code>，防止大 JSON 撑爆内存</li>
+  <li><strong>内存安全</strong>：用 <code>NSJSONSerialization JSONObjectWithData:options:NSJSONReadingMutableContainers</code> 解析后立即释放 <code>NSData</code>（ARC 自动管理）</li>
+</ul>
+
+<!-- ============================================================ -->
+<h1>四、课程热更新 — 逐文件增量下载</h1>
+
+<div class="info-box">
+<strong>核心原则</strong>：用磁盘空间换内存。NSURLSessionDownloadTask 流式写入 tmp/，全程 App RAM 零增长。
+</div>
+
+<h2>4.1 启动时对比版本</h2>
+<ol>
+  <li>App 启动时从 NSUserDefaults 读取本地 <code>courseVersion</code></li>
+  <li>GET <code>/rest/v1/course_releases?version=gt.{localVersion}</code> 拉取新增课程列表</li>
+  <li>无更新 → 跳过。有更新 → 进入下载流程</li>
+</ol>
+
+<h2>4.2 下载流程</h2>
+<pre><code>下载队列控制器（串行，一次一个文件）:
+│
+├─ 1. 从 Documents/ 复制 chapter.plist（首次：从 Bundle copyItemAtPath:）
+│
+├─ 2. 对每一节新课，逐文件下载:
+│    ├─ session_{b}-{l}.plist  → Documents/ChineseWordmp3/
+│    ├─ {b}-{l}-{1..16}.mp3    → Documents/ChineseWordmp3/  (逐个)
+│    └─ {b}-{l}.mp3             → Documents/ChineseWordmp3/
+│
+├─ 3. 每个文件:
+│    ├─ NSURLSessionDownloadTask → tmp/ 路径
+│    └─ moveItemAtURL:toURL:error:  → 目标路径（原子化移交）
+│
+├─ 4. 全部下载完成后:
+│    ├─ NSMutableArray 读取 Documents/chapter.plist
+│    ├─ 追加新 session 名
+│    └─ writeToFile:atomically: 写回
+│
+└─ 5. [TextbookManager.sharedManager loadAllTextbooks];
+    内存中的课程树自动刷新（resolvePath: 优先读 Documents，其次 Bundle）</code></pre>
+
+<h2>4.3 删除课程</h2>
+<ol>
+  <li>Admin 在 Web 后台将 <code>course_releases.is_active = false</code></li>
+  <li>App 拉取到非活跃列表后，<code>removeItemAtPath:</code> 删除 Documents 下的对应文件</li>
+  <li>从 <code>Documents/chapter.plist</code> 移除该 session 条目</li>
+  <li>调用 <code>loadAllTextbooks</code> 刷新</li>
+</ol>
+
+<div class="warn-box">
+<strong>⚠ 崩溃安全</strong>：下载过程中用户强退 App，下次启动时通过 <code>moveItemAtURL</code> 的原子性保证不会产生损坏文件。缺失的文件通过对比课程清单自动触发断点续传。
+</div>
+
+<p style="page-break-before:always"></p>
+
+<!-- ============================================================ -->
+<h1>五、App 内管理后台（AdminViewController.m）</h1>
+
+<h2>5.1 UI 架构</h2>
+<table>
+  <tr><th width="30%">元素</th><th>说明</th></tr>
+  <tr><td><code>UISegmentedControl</code></td><td>顶部 Tab 切换：审批 | 学生进度 | 课程管理</td></tr>
+  <tr><td><code>UITableView</code> (Cell 复用)</td><td>每个 Tab 一个 TableView，<code>dequeueReusableCellWithIdentifier:</code> 保证内存安全</td></tr>
+  <tr><td><code>SquishyButton</code></td><td>审批 Cell 内的「通过/拒绝」按钮，复用已有组件</td></tr>
+</table>
+
+<h2>5.2 Tab 1: 审批（Admin）</h2>
+<ul>
+  <li>拉取 <code>registration_requests?status=eq.pending</code> → 列表显示用户名 + 注册时间</li>
+  <li>每个 Cell 两个按钮：「✅ 通过」(PATCH → is_approved=true, status=approved) 和 「❌ 拒绝」(status=rejected)</li>
+  <li>操作后本地移除该行，不重新拉全量</li>
+</ul>
+
+<h2>5.3 Tab 2: 进度监控（Teacher/Admin）</h2>
+<ul>
+  <li>拉取 <code>class_assignments?teacher_id=eq.{currentUserId}</code> → 学生列表</li>
+  <li>点击学生 → Push 到 <code>StudentProgressViewController</code></li>
+  <li>按课程分组展示 <code>correct_count</code> / <code>total_attempts</code>，以简单数字呈现，不用图表</li>
+</ul>
+
+<h2>5.4 Tab 3: 课程管理（Admin）</h2>
+<ul>
+  <li>拉取 <code>course_releases</code> 所有课程列表，显示 book/lesson/title/version/is_active</li>
+  <li>每个 Cell 右侧 UISwitch 控制 <code>is_active</code>，切换时 PATCH 更新后端状态</li>
+  <li>新增课程：Web 后台完成上传，App 端仅做开关控制</li>
+</ul>
+
+<div class="constraint-box">
+<strong>内存管理</strong>：<code>didReceiveMemoryWarning</code> 中清空非当前 Tab 的数据源数组（<code>removeAllObjects</code>），保留 TableView 骨架。<strong>不能</strong> 置空 <code>self.view</code>（iOS 9 不会自动重建子视图）。
+</div>
+
+<!-- ============================================================ -->
+<h1>六、离线优先与增量同步</h1>
+
+<h2>6.1 策略</h2>
+<table>
+  <tr><th width="30%">场景</th><th>行为</th></tr>
+  <tr><td>学生玩游戏</td><td>数据优先写入本地 <code>NSUserDefaults</code>（现有逻辑完全不变）</td></tr>
+  <tr><td>完成一节课</td><td><code>saveGameProgress</code> 后，将 {feature, book, lesson, correct, total} 压入本地上传队列</td></tr>
+  <tr><td>App 进入前台 / viewDidAppear</td><td>检查上传队列，逐个 POST 到 <code>/rest/v1/user_progress</code>（UPSERT）</td></tr>
+  <tr><td>上传成功</td><td>从队列移除；标记 NSUserDefaults 中该 key 为已同步</td></tr>
+  <tr><td>上传失败（无网络）</td><td>保留队列，下次触发重试，不阻塞 UI</td></tr>
+</table>
+
+<h2>6.2 队列实现</h2>
+<p>用 <code>NSMutableArray</code> + <code>NSUserDefaults</code> 持久的简单队列（每项 < 1KB，<span class="badge bg-green">安全</span>）：</p>
+<pre><code>// 入队
+[[NSUserDefaults standardUserDefaults] setObject:pendingUploads forKey:@"upload_queue"];
+[[NSUserDefaults standardUserDefaults] synchronize];
+
+// 出队（后台串行）
+- (void)flushUploadQueue {
+    NSMutableArray *queue = [self.uploadQueue mutableCopy];
+    for (NSDictionary *item in queue) {
+        [self POST:@"/rest/v1/user_progress" body:item completion:^(NSDictionary *res, NSError *err) {
+            if (!err) [self.uploadQueue removeObject:item];
+        }];
+    }
+}</code></pre>
+
+<!-- ============================================================ -->
+<h1>七、RLS 策略（Supabase 数据库层权限）</h1>
+
+<p>所有权限在数据库层通过 Row Level Security 实现，App 端不需要额外逻辑：</p>
+<pre><code>-- Student: 只能读写自己的数据
+CREATE POLICY student_own_data ON user_progress
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Teacher: 能读自己班级学生的学习记录
+CREATE POLICY teacher_view_students ON user_progress
+  FOR SELECT USING (
+    auth.uid() IN (
+      SELECT teacher_id FROM class_assignments
+      WHERE student_id = user_progress.user_id
+    )
+  );
+
+-- Admin: 全局读写
+CREATE POLICY admin_all ON user_progress
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );</code></pre>
+
+<!-- ============================================================ -->
+<h1>八、实施步骤与工作量</h1>
+
+<h2>Phase 1: 基础设施（预计 3-5 天）</h2>
+<ol>
+  <li>Supabase 建项目 + 建表 + RLS 策略</li>
+  <li>编写 <code>SupabaseClient.m/h</code>（Keychain + NSURLSession 封装）</li>
+  <li>编写 <code>LoginViewController.m/h</code></li>
+  <li>改造 <code>AppDelegate.m</code> 启动流程</li>
+</ol>
+
+<h2>Phase 2: 核心同步（预计 3-5 天）</h2>
+<ol>
+  <li>逐文件下载队列控制器</li>
+  <li><code>resolvePath:</code> 扩展支持 Documents 优先</li>
+  <li><code>chapter.plist</code> 动态合并</li>
+  <li>离线上传队列 + 后台静默同步</li>
+</ol>
+
+<h2>Phase 3: 管理后台（预计 5-7 天）</h2>
+<ol>
+  <li>编写 <code>AdminViewController.m/h</code>（SegmentedControl + 3 个 TableView）</li>
+  <li>审批 Tab API 对接</li>
+  <li>进度监控 Tab + StudentProgressViewController</li>
+  <li>课程管理 Tab（is_active toggle + 同步触发）</li>
+</ol>
+
+<h2>Phase 4: 验证与发布（预计 2-3 天）</h2>
+<ol>
+  <li>真机测试（iPad Mini 1, 512MB）</li>
+  <li>内存占用验证（目标 &lt; 30MB）</li>
+  <li>断网/弱网/强退场景测试</li>
+  <li>IPA 打包 + Sideloadly 部署</li>
+</ol>
+
+<p style="margin-top:10pt"><strong>总计预估：13-20 人天</strong></p>
+
+<div class="section-break"></div>
+<p style="font-size:8pt;color:#8899aa;text-align:center">
+Kids Chinese UI — iPad Mini 1 (iOS 9.3.5, armv7, 512MB RAM) · 零第三方库 · 纯 NSURLSession<br>
+生成的日期: 2026-06-20
+</p>
+
+</body>
+</html>
