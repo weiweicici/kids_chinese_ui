@@ -4,6 +4,7 @@
 #if __has_include("SupabaseClient.h")
 #import "SupabaseClient.h"
 #endif
+#import "TelemetryManager.h"
 #import "SquishyButton.h"
 #import <objc/runtime.h>
 
@@ -43,6 +44,7 @@ static const void *kWordModelKey = &kWordModelKey;
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
     [[AudioManager sharedManager] stopCurrentSound];
+    [[TelemetryManager sharedManager] flushAndSync];
 }
 
 - (void)buildGameUI {
@@ -448,6 +450,14 @@ static const void *kWordModelKey = &kWordModelKey;
     } else {
         [self sendCardBackToBench:card];
         [[AudioManager sharedManager] playSoundNamed:@"cuola.caf"];
+        
+        // Telemetry bypass: record error
+        [[TelemetryManager sharedManager] recordEventWithFeature:@"game1_easy"
+                                                      targetWord:correctWord.character
+                                                      wrongInput:cardWord.character
+                                                       errorType:@"order_wrong"
+                                                            book:self.currentBook
+                                                          lesson:self.currentLesson];
     }
 }
 
@@ -500,6 +510,15 @@ static const void *kWordModelKey = &kWordModelKey;
                 card.layer.borderWidth = 3.0f;
                 card.layer.borderColor = [UIColor redColor].CGColor;
             }];
+            
+            // Telemetry bypass: record error
+            [[TelemetryManager sharedManager] recordEventWithFeature:@"game1_hard"
+                                                      targetWord:self.words[i].character
+                                                      wrongInput:cardWord.character
+                                                       errorType:@"order_wrong"
+                                                            book:self.currentBook
+                                                          lesson:self.currentLesson];
+
             // BUG FIX: use weak self — if user exits within 1.2s VC may be deallocated
             __weak typeof(self) weakSelf = self;
             __weak UIButton *weakCard = card;

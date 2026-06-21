@@ -2,6 +2,7 @@
 #import "TextbookManager.h"
 #import "AudioManager.h"
 #import "SquishyButton.h"
+#import "TelemetryManager.h"
 #import <QuartzCore/QuartzCore.h>
 
 @interface PinyinMainViewController ()
@@ -71,6 +72,11 @@
 @end
 
 @implementation PinyinMainViewController
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [[TelemetryManager sharedManager] flushAndSync];
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -1358,6 +1364,15 @@
 
         self.charResults[@(idx)] = @{@"result": @"wrong", @"input": input};
 
+        // Telemetry bypass: record error
+        NSString *featureName = self.gameModeEasy ? @"pinyin_easy" : @"pinyin_hard";
+        [[TelemetryManager sharedManager] recordEventWithFeature:featureName
+                                                      targetWord:word.character
+                                                      wrongInput:input
+                                                       errorType:@"pinyin_typo"
+                                                            book:self.currentBook
+                                                          lesson:self.currentLesson];
+
         // Only advance gameStep for the current target (wrong on non-target means user
         // clicked a red cell to retry — do NOT skip the current target).
         if (idx == self.currentTargetIdx) {
@@ -1498,6 +1513,16 @@
         } else {
             // Mark as wrong in charResults (clear input for retry)
             self.charResults[key] = @{@"result": @"wrong", @"input": userInput};
+            
+            // Telemetry bypass: record fullspell error
+            NSString *featureName = self.gameModeEasy ? @"fullspell_easy" : @"fullspell_hard";
+            [[TelemetryManager sharedManager] recordEventWithFeature:featureName
+                                                          targetWord:word.character
+                                                          wrongInput:userInput
+                                                           errorType:@"pinyin_typo"
+                                                                book:self.currentBook
+                                                              lesson:self.currentLesson];
+
             // Clear userInput so popup shows blank next time
             [self.userInputs removeObjectForKey:key];
             

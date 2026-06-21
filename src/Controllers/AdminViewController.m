@@ -18,6 +18,9 @@
 // Current tab index
 @property (assign, nonatomic) NSInteger currentTab;
 
+// 进度 tab data
+@property (strong, nonatomic) NSArray *progressRecords;
+
 @end
 
 @implementation AdminViewController
@@ -113,11 +116,14 @@
 - (void)loadTabData {
     [self.spinner startAnimating];
     self.pendingRequests = nil;
+    self.progressRecords = nil;
     self.profilesMap = nil;
     [self.tableView reloadData];
 
     if (self.currentTab == 0) {
         [self loadPendingApprovals];
+    } else if (self.currentTab == 1) {
+        [self loadStudentProgress];
     } else {
         [self.spinner stopAnimating];
         [self showPlaceholder];
@@ -126,9 +132,7 @@
 
 - (void)showPlaceholder {
     self.emptyLabel.hidden = NO;
-    if (self.currentTab == 1) {
-        self.emptyLabel.text = @"进度追踪功能开发中";
-    } else if (self.currentTab == 2) {
+    if (self.currentTab == 2) {
         self.emptyLabel.text = @"课程管理功能开发中";
     }
 }
@@ -186,6 +190,69 @@
             NSArray *profiles = resp[@"data"];
             if ([profiles isKindOfClass:[NSArray class]]) {
                 NSMutableDictionary *map = [NSMutableDictionary dictionary];
+                for (NSDictionary *p in profiles) {
+                    NSString *pid = p[@"id"];
+                    if (pid) map[pid] = p;
+                }
+                self.profilesMap = map;
+            }
+            [self.tableView reloadData];
+        });
+    }];
+}
+
+#pragma mark - Student Progress Data
+
+- (void)loadStudentProgress {
+    [[SupabaseClient sharedClient] GET:@"/rest/v1/user_progress?select=*&order=updated_at.desc"
+                            completion:^(NSDictionary *resp, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error) {
+                [self.spinner stopAnimating];
+                self.emptyLabel.hidden = NO;
+                self.emptyLabel.text = [NSString stringWithFormat:@"加载进度失败: %@", error.localizedDescription];
+                return;
+            }
+            NSArray *data = resp[@"data"];
+            if (![data isKindOfClass:[NSArray class]] || data.count == 0) {
+                [self.spinner stopAnimating];
+                self.emptyLabel.hidden = NO;
+                self.emptyLabel.text = @"暂无学生进度数据";
+                return;
+            }
+            self.progressRecords = data;
+            [self fetchProfilesForProgressRecords];
+        });
+    }];
+}
+
+- (void)fetchProfilesForProgressRecords {
+    NSMutableArray *userIds = [NSMutableArray array];
+    for (NSDictionary *rec in self.progressRecords) {
+        NSString *uid = rec[@"user_id"];
+        if (uid && ![userIds containsObject:uid]) [userIds addObject:uid];
+    }
+
+    if (userIds.count == 0) {
+        [self.spinner stopAnimating];
+        [self.tableView reloadData];
+        return;
+    }
+
+    NSString *idList = [userIds componentsJoinedByString:@","];
+    NSString *path = [NSString stringWithFormat:@"/rest/v1/profiles?id=in.(%@)", idList];
+
+    [[SupabaseClient sharedClient] GET:path completion:^(NSDictionary *resp, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.spinner stopAnimating];
+            if (error) {
+                self.emptyLabel.hidden = NO;
+                self.emptyLabel.text = [NSString stringWithFormat:@"加载用户资料失败: %@", error.localizedDescription];
+                return;
+            }
+            NSArray *profiles = resp[@"data"];
+            if ([profiles isKindOfClass:[NSArray class]]) {
+                NSMutableDictionary *map = [NSMutableDictionary dictionaryWithDictionary:self.profilesMap ?: @{}];
                 for (NSDictionary *p in profiles) {
                     NSString *pid = p[@"id"];
                     if (pid) map[pid] = p;
@@ -258,6 +325,8 @@
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)section {
     if (self.currentTab == 0) {
         return self.pendingRequests.count;
+    } else if (self.currentTab == 1) {
+        return self.progressRecords.count;
     }
     return 0;
 }
@@ -279,44 +348,90 @@
     for (UIView *v in cell.contentView.subviews) {
         if ([v isKindOfClass:[UIButton class]]) [v removeFromSuperview];
     }
+    cell.accessoryType = UITableViewCellAccessoryNone;
 
-    NSDictionary *req = self.pendingRequests[ip.row];
-    NSString *userId = req[@"user_id"];
-    NSDictionary *profile = self.profilesMap[userId];
+    if (self.currentTab == 0) {
+        NSDictionary *req = self.pendingRequests[ip.row];
+        NSString *userId = req[@"user_id"];
+        NSDictionary *profile = self.profilesMap[userId];
 
-    cell.textLabel.text = profile[@"display_name"] ?: profile[@"username"] ?: @"未知用户";
-    cell.textLabel.font = [UIFont boldSystemFontOfSize:17.0f];
-    cell.textLabel.textColor = [self onSurfaceColor];
+        cell.textLabel.text = profile[@"display_name"] ?: profile[@"username"] ?: @"未知用户";
+        cell.textLabel.font = [UIFont boldSystemFontOfSize:17.0f];
+        cell.textLabel.textColor = [self onSurfaceColor];
 
-    NSString *dateStr = req[@"created_at"] ?: @"";
-    if ([dateStr length] > 10) dateStr = [dateStr substringToIndex:10];
-    cell.detailTextLabel.text = [NSString stringWithFormat:@"注册于 %@", dateStr];
-    cell.detailTextLabel.font = [UIFont systemFontOfSize:14.0f];
-    cell.detailTextLabel.textColor = [self onSurfaceVariantColor];
+        NSString *dateStr = req[@"created_at"] ?: @"";
+        if ([dateStr length] > 10) dateStr = [dateStr substringToIndex:10];
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"注册于 %@", dateStr];
+        cell.detailTextLabel.font = [UIFont systemFontOfSize:14.0f];
+        cell.detailTextLabel.textColor = [self onSurfaceVariantColor];
 
-    // Approve button
-    UIButton *approveBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    approveBtn.frame = CGRectMake(560.0f, 16.0f, 44.0f, 44.0f);
-    approveBtn.backgroundColor = [UIColor colorWithRed:0.2f green:0.7f blue:0.3f alpha:1.0f];
-    approveBtn.layer.cornerRadius = 22.0f;
-    [approveBtn setTitle:@"✓" forState:UIControlStateNormal];
-    [approveBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    approveBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22.0f];
-    approveBtn.tag = ip.row;
-    [approveBtn addTarget:self action:@selector(cellApproveTapped:) forControlEvents:UIControlEventTouchUpInside];
-    [cell.contentView addSubview:approveBtn];
+        // Approve button
+        UIButton *approveBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        approveBtn.frame = CGRectMake(560.0f, 16.0f, 44.0f, 44.0f);
+        approveBtn.backgroundColor = [UIColor colorWithRed:0.2f green:0.7f blue:0.3f alpha:1.0f];
+        approveBtn.layer.cornerRadius = 22.0f;
+        [approveBtn setTitle:@"✓" forState:UIControlStateNormal];
+        [approveBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        approveBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22.0f];
+        approveBtn.tag = ip.row;
+        [approveBtn addTarget:self action:@selector(cellApproveTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [cell.contentView addSubview:approveBtn];
 
-    // Reject button
-    UIButton *rejectBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    rejectBtn.frame = CGRectMake(620.0f, 16.0f, 44.0f, 44.0f);
-    rejectBtn.backgroundColor = [UIColor colorWithRed:0.8f green:0.2f blue:0.2f alpha:1.0f];
-    rejectBtn.layer.cornerRadius = 22.0f;
-    [rejectBtn setTitle:@"✗" forState:UIControlStateNormal];
-    [rejectBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    rejectBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22.0f];
-    rejectBtn.tag = ip.row;
-    [rejectBtn addTarget:self action:@selector(cellRejectTapped:) forControlEvents:UIControlEventTouchUpInside];
-    [cell.contentView addSubview:rejectBtn];
+        // Reject button
+        UIButton *rejectBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        rejectBtn.frame = CGRectMake(620.0f, 16.0f, 44.0f, 44.0f);
+        rejectBtn.backgroundColor = [UIColor colorWithRed:0.8f green:0.2f blue:0.2f alpha:1.0f];
+        rejectBtn.layer.cornerRadius = 22.0f;
+        [rejectBtn setTitle:@"✗" forState:UIControlStateNormal];
+        [rejectBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        rejectBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22.0f];
+        rejectBtn.tag = ip.row;
+        [rejectBtn addTarget:self action:@selector(cellRejectTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [cell.contentView addSubview:rejectBtn];
+    } else if (self.currentTab == 1) {
+        NSDictionary *rec = self.progressRecords[ip.row];
+        NSString *userId = rec[@"user_id"];
+        NSDictionary *profile = self.profilesMap[userId];
+
+        cell.textLabel.text = profile[@"display_name"] ?: profile[@"username"] ?: @"未知学生";
+        cell.textLabel.font = [UIFont boldSystemFontOfSize:17.0f];
+        cell.textLabel.textColor = [self onSurfaceColor];
+
+        NSString *feature = rec[@"feature"];
+        NSInteger book = [rec[@"book_number"] integerValue];
+        NSInteger lesson = [rec[@"lesson_number"] integerValue];
+
+        NSString *featureName = feature;
+        if ([feature isEqualToString:@"main"]) featureName = @"认字主页";
+        else if ([feature isEqualToString:@"game1"]) featureName = @"拼字(易)";
+        else if ([feature isEqualToString:@"game1_easy"]) featureName = @"拼字(易)";
+        else if ([feature isEqualToString:@"game1_hard"]) featureName = @"拼字(难)";
+        else if ([feature isEqualToString:@"game2"]) featureName = @"跳字";
+        else if ([feature isEqualToString:@"game3_easy"]) featureName = @"找字(易)";
+        else if ([feature isEqualToString:@"game3_hard"]) featureName = @"找字(难)";
+        else if ([feature isEqualToString:@"pinyin_easy"]) featureName = @"拼音(易)";
+        else if ([feature isEqualToString:@"pinyin_hard"]) featureName = @"拼音(难)";
+        else if ([feature isEqualToString:@"fullspell_easy"]) featureName = @"填音(易)";
+        else if ([feature isEqualToString:@"fullspell_hard"]) featureName = @"填音(难)";
+
+        NSArray *telemetry = rec[@"telemetry_data"];
+        NSInteger errCount = 0;
+        if ([telemetry isKindOfClass:[NSArray class]]) {
+            errCount = telemetry.count;
+        }
+
+        NSString *updatedAt = rec[@"updated_at"] ?: @"";
+        if (updatedAt.length > 16) {
+            updatedAt = [updatedAt substringWithRange:NSMakeRange(5, 11)];
+            updatedAt = [updatedAt stringByReplacingOccurrencesOfString:@"T" withString:@" "];
+        }
+
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · 第%ld册 第%ld课 · 错题: %ld · %@",
+                                     featureName, (long)book, (long)lesson, (long)errCount, updatedAt];
+        cell.detailTextLabel.font = [UIFont systemFontOfSize:14.0f];
+        cell.detailTextLabel.textColor = [self onSurfaceVariantColor];
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    }
 
     return cell;
 }
@@ -345,6 +460,40 @@
         [self rejectRequest:req[@"id"]];
     }]];
     [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
+    [tv deselectRowAtIndexPath:ip animated:YES];
+    if (self.currentTab != 1) return;
+
+    NSDictionary *rec = self.progressRecords[ip.row];
+    NSArray *telemetry = rec[@"telemetry_data"];
+    if (![telemetry isKindOfClass:[NSArray class]] || telemetry.count == 0) {
+        [self showAlert:@"无错误记录" message:@"该学生目前没有错题记录！"];
+        return;
+    }
+
+    NSString *userId = rec[@"user_id"];
+    NSDictionary *profile = self.profilesMap[userId];
+    NSString *studentName = profile[@"display_name"] ?: profile[@"username"] ?: @"该学生";
+
+    NSMutableString *details = [NSMutableString string];
+    [details appendFormat:@"最近 %ld 次错题记录：\n\n", (long)telemetry.count];
+
+    NSInteger count = 0;
+    for (NSInteger i = (NSInteger)telemetry.count - 1; i >= 0 && count < 10; i--, count++) {
+        NSDictionary *event = telemetry[i];
+        NSString *word = event[@"target_word"] ?: @"";
+        NSString *wrongInput = event[@"wrong_input"] ?: @"";
+        
+        [details appendFormat:@"%ld. 目标字:【%@】 错填/点错:【%@】\n", (long)(count + 1), word, wrongInput];
+    }
+
+    if (telemetry.count > 10) {
+        [details appendString:@"\n* （只显示最近 10 条）"];
+    }
+
+    [self showAlert:[NSString stringWithFormat:@"%@ 的错题详情", studentName] message:details];
 }
 
 @end

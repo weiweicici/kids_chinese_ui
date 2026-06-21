@@ -47,4 +47,9 @@
                    lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
                      completion:(void (^)(NSError *error))completion;
 
+- (void)saveProgressWithFeature:(NSString *)feature bookNumber:(NSInteger)book
+                   lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
+                  telemetryData:(NSArray *)telemetryData
+                     completion:(void (^)(NSError *error))completion;
+
 @end

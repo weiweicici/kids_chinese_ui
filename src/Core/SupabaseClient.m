@@ -474,6 +474,18 @@ static NSTimeInterval const kRequestTimeout = 15.0;
 - (void)saveProgressWithFeature:(NSString *)feature bookNumber:(NSInteger)book
                    lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
                      completion:(void (^)(NSError *))completion {
+    [self saveProgressWithFeature:feature
+                       bookNumber:book
+                     lessonNumber:lesson
+                        wordIndex:wordIndex
+                    telemetryData:nil
+                       completion:completion];
+}
+
+- (void)saveProgressWithFeature:(NSString *)feature bookNumber:(NSInteger)book
+                   lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
+                  telemetryData:(NSArray *)telemetryData
+                     completion:(void (^)(NSError *))completion {
     if (!self.isAvailable) {
         if (completion) completion(nil); // silent skip when offline
         return;
@@ -506,6 +518,7 @@ static NSTimeInterval const kRequestTimeout = 15.0;
     body[@"book_number"] = @(book);
     body[@"lesson_number"] = @(lesson);
     if (wordIndex >= 0) body[@"word_index"] = @(wordIndex);
+    if (telemetryData) body[@"telemetry_data"] = telemetryData;
     body[@"updated_at"] = [[self class] iso8601String];
 
     req.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];

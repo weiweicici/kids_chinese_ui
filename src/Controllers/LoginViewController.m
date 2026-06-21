@@ -4,7 +4,7 @@
 #import "AppNavigationController.h"
 #import "SquishyButton.h"
 
-static NSString *const kSupabaseURL = @"https://mwsapokofskjkaynnvas.supabase.co";
+static NSString *const kSupabaseURL = @"https://mwsapokofskjwaynnvas.supabase.co";
 static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13c2Fwb2tvZnNrandheW5udmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDE4OTUsImV4cCI6MjA5NzU3Nzg5NX0.Cw6hXnPkw_hyC6BOxVRVqe2dWL7k8jcMAtHvmKkfesE";
 
 @interface LoginViewController () <UITextFieldDelegate>
@@ -150,6 +150,15 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
         self.usernameField.alpha = 0.0f;
     }
     self.emailField.frame = CGRectMake(60.0f, cy, 380.0f, 48.0f);
+    cy += 68.0f;
+
+    self.passwordField.frame = CGRectMake(60.0f, cy, 380.0f, 48.0f);
+    cy += 68.0f;
+
+    self.submitBtn.frame = CGRectMake(100.0f, cy, 300.0f, 56.0f);
+    cy += 76.0f;
+
+    self.statusLabel.frame = CGRectMake(40.0f, cy, 420.0f, 50.0f);
 }
 
 - (void)submitTapped {
@@ -195,8 +204,16 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
                                   error.localizedDescription ?: @"未知错误"] isError:YES];
                 return;
             }
+            
+            // Save the returned access token temporarily so subsequent profile and registration request
+            // creation requests are fully authenticated under the user's RLS policies
+            NSString *accessToken = response[@"access_token"];
+            if (accessToken) {
+                [[SupabaseClient sharedClient] saveToken:accessToken];
+            }
+            
             // Signup succeeded — create profile + registration request
-            NSString *userId = response[@"id"];
+            NSString *userId = response[@"id"] ?: response[@"user"][@"id"];
             if (!userId) {
                 [self showStatus:@"注册失败: 无法获取用户信息" isError:YES];
                 return;
@@ -233,6 +250,9 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
     };
     [[SupabaseClient sharedClient] POST:@"/rest/v1/registration_requests" body:reqBody completion:^(NSDictionary *resp, NSError *err) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            // Clear temporary token so student cannot bypass approval status
+            [[SupabaseClient sharedClient] clearToken];
+            
             if (err) {
                 [self showStatus:@"注册成功，但提交审批失败，请联系老师" isError:NO];
                 return;

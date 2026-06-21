@@ -4,7 +4,7 @@
 #import "LoginViewController.h"
 #import "SupabaseClient.h"
 
-static NSString *const kSupabaseURL = @"https://mwsapokofskjkaynnvas.supabase.co";
+static NSString *const kSupabaseURL = @"https://mwsapokofskjwaynnvas.supabase.co";
 static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13c2Fwb2tvZnNrandheW5udmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDE4OTUsImV4cCI6MjA5NzU3Nzg5NX0.Cw6hXnPkw_hyC6BOxVRVqe2dWL7k8jcMAtHvmKkfesE";
 
 @implementation AppDelegate

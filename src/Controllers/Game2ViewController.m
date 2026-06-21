@@ -4,6 +4,7 @@
 #if __has_include("SupabaseClient.h")
 #import "SupabaseClient.h"
 #endif
+#import "TelemetryManager.h"
 #import "SquishyButton.h"
 #import <objc/runtime.h>
 
@@ -67,6 +68,7 @@ static const CGFloat kBubbleSize = 110.0f;
     [self stopGameTimer];
     [[AudioManager sharedManager] stopCurrentSound];
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
+    [[TelemetryManager sharedManager] flushAndSync];
 }
 
 #pragma mark - UI Setup
@@ -519,6 +521,16 @@ static const CGFloat kBubbleSize = 110.0f;
         NSString *ch = bubbleWord.character;
         NSInteger count = [self.wrongTapDetails[ch] integerValue] + 1;
         self.wrongTapDetails[ch] = @(count);
+        
+        // Telemetry bypass: record error
+        if (self.targetWord) {
+            [[TelemetryManager sharedManager] recordEventWithFeature:@"game2"
+                                                          targetWord:self.targetWord.character
+                                                          wrongInput:bubbleWord.character
+                                                           errorType:@"char_mixup"
+                                                                book:self.currentBook
+                                                              lesson:self.currentLesson];
+        }
     }
 
     [self shakeView:sender];

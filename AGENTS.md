@@ -99,6 +99,9 @@ python3 deploy.py --logs              # 仅查看日志
 24. **拼音游戏(易)音频改为随机**: `setupGameOrder` 始终 shuffle，网格汉字维持课文顺序
 25. **拼音游戏(难)模式**: Footer 新增入口，仅差异为 16 个汉字显示为乱序（`gridOrder` 映射），音频同样随机，弹出/输入/反馈与易模式相同
 26. **全文拼写(易/难) — 自由填音模式**: 无音频朗读，用户自由点击任意未完成字弹出输入卡填入拼音。全部填完或点「检查」按钮触发一次性评价：正确字以"撕日历"动画消失，错误字清空输入留格子原样。重复修正直到全对。结果显示正确/错误计数。NSUserDefaults 保存 `fullspell_` 前缀独立 key。易/难差异仅汉字网格顺序。
+27. **无感数据旁路监控系统 (Telemetry System)**：实现了 `TelemetryManager` 核心基建，采用串行后台线程队列，支持在 iPad Mini 1 (iOS 9) 512MB 设备上非阻塞式 enqueuing，设置 100 条熔断缓冲防止爆内存，通过 NSUserDefaults 静默同步到 Supabase。并在拼音/全文拼写/Game1/Game2/Game3 答错分支和退出生命周期钩子中完成了精准的埋点注入。
+28. **登录注册重叠 Bug 修复与 URL 拼写纠错**：修正了 `LoginViewController.m` 中由于 `modeChanged:` 未改变密码框、按钮的 Y 轴导致注册模式下 UI 重叠无法点击按钮的严重 bug；更新了注册响应解析逻辑，兼容关闭邮箱验证后的嵌套 JSON (支持 `response[@"user"][@"id"]`)，并将 `access_token` 临时保存用以通过 profiles / requests 写入时的 RLS 校验；纠正了 `kSupabaseURL` 中将 `waynnvas` 误打为 `kaynnvas` 的拼写错误。
+29. **教师进度看板与错题追踪**：重写了 `AdminViewController.m` 中的“进度”选项卡，实现了拉取数据库所有学生进度并进行本地 profiles 信息映射列表展示；并且实现了点击进度行弹窗展示该学生**最近 10 次的详细错题列表**（如：`目标字:【天】 错填:【大】`）。
 
 ### ❌ 已知问题
 
@@ -145,10 +148,11 @@ python3 deploy.py --logs              # 仅查看日志
 |---|---|---|
 | id | uuid PK | |
 | user_id | uuid FK | `auth.users.id` |
-| feature | text | `'main'` / `'game1'` / `'game2'` / `'game3'` |
+| feature | text | `'main'` / `'game1'` / `'game2'` / `'game3'` / `'pinyin'` / `'fullspell'` |
 | book_number | int | 册数 |
 | lesson_number | int | 课数 |
 | word_index | int? | 闪卡专用（当前看到第几个字） |
+| telemetry_data | jsonb | 错题及学习行为埋点记录（最多100条） |
 | updated_at | timestamptz | |
 
 **registration_requests**（审批队列）
@@ -197,14 +201,14 @@ python3 deploy.py --logs              # 仅查看日志
 | `Game2ViewController.m` | 完成时保存 `feature='game2'` 进度 |
 
 ### 实施步骤
-1. Supabase 建项目 → 建表 → 设 RLS 策略
+1. Supabase 建项目 → 建表 → 设 RLS 策略 ✅ 已完成
 2. 写 `SupabaseClient.m/h`（封装注册、登录、CRUD）✅ 已完成
-3. 写 `LoginViewController.m/h` ✅ 已完成
+3. 写 `LoginViewController.m/h`（修复 UI 重叠与 JSON 嵌套）✅ 已完成
 4. 改 `AppDelegate.m` 启动流程 ✅ 已完成
-5. 写 `AdminViewController.m/h` ✅ 已完成
+5. 写 `AdminViewController.m/h`（进度追踪看板与错题详情已完成）✅ 已完成
 6. 改 HomeScreen 加管理入口（role==admin 显示）✅ 已完成
-7. 改 MainScreen/Flashcard/Game1/Game2 加进度读写 ✅ 已完成
-8. 编译测试 → 部署 ✅ 编译通过（main + no-backend 双分支）
+7. 改 MainScreen/Flashcard/Game1/Game2/Game3/Pinyin 增加进度读写与 Telemetry 数据旁路监控 ✅ 已完成
+8. 编译测试 → 部署 ✅ 编译与打包通过（build_output/ChineseApp.ipa）
 
 ## 关键约束
 - **不要碰 UI 布局代码**（用户花大量时间调整过）

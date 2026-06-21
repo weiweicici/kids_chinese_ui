@@ -2,6 +2,7 @@
 #import "TextbookManager.h"
 #import "AudioManager.h"
 #import "SquishyButton.h"
+#import "TelemetryManager.h"
 
 #pragma mark - CharacterCell (self-contained grid cell with rice-grid drawing)
 
@@ -159,6 +160,7 @@
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
     [[AudioManager sharedManager] stopCurrentSound];
+    [[TelemetryManager sharedManager] flushAndSync];
 }
 
 #pragma mark - UI Setup
@@ -465,6 +467,19 @@
 
     [[AudioManager sharedManager] playSoundNamed:@"cuola.caf"];
     [cell flashWrong];
+
+    // Telemetry bypass: record error
+    if (self.currentTargetIndex >= 0 && self.currentTargetIndex < self.words.count) {
+        WordModel *targetWord = self.words[self.currentTargetIndex];
+        NSString *wrongChar = cell.charLabel.text ?: @"";
+        NSString *featureName = self.isEasy ? @"game3_easy" : @"game3_hard";
+        [[TelemetryManager sharedManager] recordEventWithFeature:featureName
+                                                      targetWord:targetWord.character
+                                                      wrongInput:wrongChar
+                                                       errorType:@"char_mixup"
+                                                            book:self.currentBook
+                                                          lesson:self.currentLesson];
+    }
 
     // BUG FIX: use weak self
     __weak typeof(self) weakSelf = self;
