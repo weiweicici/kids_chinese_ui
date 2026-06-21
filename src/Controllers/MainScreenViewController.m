@@ -1,6 +1,9 @@
 #import "MainScreenViewController.h"
 #import "TextbookManager.h"
 #import "AudioManager.h"
+#if __has_include("SupabaseClient.h")
+#import "SupabaseClient.h"
+#endif
 #import "SquishyButton.h"
 #import "RiceCellView.h"
 #import "FlashcardViewController.h"
@@ -465,9 +468,17 @@
 - (void)pickerLessonSelected:(UIButton *)sender {
     self.currentBook = self.selectedBookForPicker;
     self.currentLesson = sender.tag;
-    
+
     [self reloadLessonData];
     [self dismissLessonPicker];
+
+#if __has_include("SupabaseClient.h")
+    [[SupabaseClient sharedClient] saveProgressWithFeature:@"main"
+                                                bookNumber:self.currentBook
+                                              lessonNumber:self.currentLesson
+                                                 wordIndex:-1
+                                                completion:nil];
+#endif
 }
 
 - (void)dismissLessonPicker {

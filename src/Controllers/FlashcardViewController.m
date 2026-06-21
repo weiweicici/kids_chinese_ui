@@ -1,7 +1,9 @@
 #import "FlashcardViewController.h"
 #import "TextbookManager.h"
 #import "AudioManager.h"
-
+#if __has_include("SupabaseClient.h")
+#import "SupabaseClient.h"
+#endif
 #import "SquishyButton.h"
 
 @interface FlashcardViewController ()
@@ -332,6 +334,14 @@
     [[NSUserDefaults standardUserDefaults] setInteger:count forKey:key];
     [[NSUserDefaults standardUserDefaults] synchronize];
 
+#if __has_include("SupabaseClient.h")
+    [[SupabaseClient sharedClient] saveProgressWithFeature:@"flashcard"
+                                                bookNumber:self.currentBook
+                                              lessonNumber:self.currentLesson
+                                                 wordIndex:self.currentPlayIndex
+                                                completion:nil];
+#endif
+
     [[AudioManager sharedManager] playSoundNamed:@"nizhenbang.caf"];
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"真棒！"
@@ -416,6 +426,15 @@
 
 - (void)backBtnClicked {
     [self stopAutoAdvance];
+
+#if __has_include("SupabaseClient.h")
+    [[SupabaseClient sharedClient] saveProgressWithFeature:@"flashcard"
+                                                bookNumber:self.currentBook
+                                              lessonNumber:self.currentLesson
+                                                 wordIndex:self.currentPlayIndex
+                                                completion:nil];
+#endif
+
     [self.navigationController popViewControllerAnimated:YES];
 }
 

@@ -38,4 +38,13 @@
 - (void)signInWithEmail:(NSString *)email password:(NSString *)password
              completion:(void (^)(NSDictionary *response, NSError *error))completion;
 
+// Decode user ID ("sub") from stored JWT. Returns nil if no token or decode fails.
+- (NSString *)currentUserIdFromToken;
+
+// Save/update user_progress (upsert via merge-duplicates on unique user_id+feature).
+// Pass wordIndex = -1 if not applicable.
+- (void)saveProgressWithFeature:(NSString *)feature bookNumber:(NSInteger)book
+                   lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
+                     completion:(void (^)(NSError *error))completion;
+
 @end

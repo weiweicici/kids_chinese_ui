@@ -1,6 +1,9 @@
 #import "Game1ViewController.h"
 #import "TextbookManager.h"
 #import "AudioManager.h"
+#if __has_include("SupabaseClient.h")
+#import "SupabaseClient.h"
+#endif
 #import "SquishyButton.h"
 #import <objc/runtime.h>
 
@@ -536,6 +539,14 @@ static const void *kWordModelKey = &kWordModelKey;
     count++;
     [[NSUserDefaults standardUserDefaults] setInteger:count forKey:key];
     [[NSUserDefaults standardUserDefaults] synchronize];
+
+#if __has_include("SupabaseClient.h")
+    [[SupabaseClient sharedClient] saveProgressWithFeature:@"game1"
+                                                bookNumber:self.currentBook
+                                              lessonNumber:self.currentLesson
+                                                 wordIndex:-1
+                                                completion:nil];
+#endif
 
     // Play correct sound first
     [[AudioManager sharedManager] playSoundNamed:@"nizhenbang.caf"];

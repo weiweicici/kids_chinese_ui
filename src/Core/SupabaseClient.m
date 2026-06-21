@@ -442,6 +442,88 @@ static NSTimeInterval const kRequestTimeout = 15.0;
     }
 }
 
+#pragma mark - User ID & Progress
+
+- (NSString *)currentUserIdFromToken {
+    NSString *jwt = [self getToken];
+    if (!jwt) return nil;
+
+    NSArray *parts = [jwt componentsSeparatedByString:@"."];
+    if (parts.count < 2) return nil;
+
+    // Base64url-decode the payload (second part)
+    NSString *payload = parts[1];
+    payload = [payload stringByReplacingOccurrencesOfString:@"-" withString:@"+"];
+    payload = [payload stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
+    // Pad to multiple of 4
+    NSUInteger paddedLen = payload.length + (4 - (payload.length % 4)) % 4;
+    if (paddedLen > payload.length) {
+        payload = [payload stringByPaddingToLength:paddedLen withString:@"=" startingAtIndex:0];
+    }
+
+    NSData *data = [[NSData alloc] initWithBase64EncodedString:payload options:0];
+    if (!data) return nil;
+
+    NSError *err = nil;
+    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&err];
+    if (!json || err) return nil;
+
+    return json[@"sub"];
+}
+
+- (void)saveProgressWithFeature:(NSString *)feature bookNumber:(NSInteger)book
+                   lessonNumber:(NSInteger)lesson wordIndex:(NSInteger)wordIndex
+                     completion:(void (^)(NSError *))completion {
+    if (!self.isAvailable) {
+        if (completion) completion(nil); // silent skip when offline
+        return;
+    }
+
+    NSString *userId = [self currentUserIdFromToken];
+    if (!userId) {
+        if (completion) completion(nil);
+        return;
+    }
+
+    NSString *urlString = [NSString stringWithFormat:@"%@/rest/v1/user_progress", self.baseURL];
+    NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlString]];
+    req.HTTPMethod = @"POST";
+    [req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    [req setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [req setValue:@"resolution=merge-duplicates" forHTTPHeaderField:@"Prefer"];
+
+    NSString *token = [self getToken];
+    if (token) {
+        [req setValue:[NSString stringWithFormat:@"Bearer %@", token] forHTTPHeaderField:@"Authorization"];
+    } else if (self.anonKey) {
+        [req setValue:[NSString stringWithFormat:@"Bearer %@", self.anonKey] forHTTPHeaderField:@"Authorization"];
+        [req setValue:self.anonKey forHTTPHeaderField:@"apikey"];
+    }
+
+    NSMutableDictionary *body = [NSMutableDictionary dictionary];
+    body[@"user_id"] = userId;
+    body[@"feature"] = feature;
+    body[@"book_number"] = @(book);
+    body[@"lesson_number"] = @(lesson);
+    if (wordIndex >= 0) body[@"word_index"] = @(wordIndex);
+    body[@"updated_at"] = [[self class] iso8601String];
+
+    req.HTTPBody = [NSJSONSerialization dataWithJSONObject:body options:0 error:nil];
+
+    [[self.session dataTaskWithRequest:req completionHandler:^(NSData *data,
+          NSURLResponse *response, NSError *error) {
+        if (completion) completion(error);
+    }] resume];
+}
+
++ (NSString *)iso8601String {
+    NSDateFormatter *fmt = [[NSDateFormatter alloc] init];
+    fmt.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    fmt.timeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
+    fmt.dateFormat = @"yyyy-MM-dd'T'HH:mm:ss'Z'";
+    return [fmt stringFromDate:[NSDate date]];
+}
+
 #pragma mark - Cleanup
 
 - (void)dealloc {
