@@ -143,13 +143,7 @@
         return path;
     }
     
-    // 2. Try absolute workspace path
-    path = [NSString stringWithFormat:@"/Users/macmini/Downloads/kids_chinese_ui/ChineseWordmp3/%@", soundName];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return path;
-    }
-    
-    // 3. Try relative path
+    // 2. Try relative path (sandbox documents or working directory)
     path = [NSString stringWithFormat:@"ChineseWordmp3/%@", soundName];
     if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
         return path;

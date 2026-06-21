@@ -498,9 +498,10 @@ static const void *kWordModelKey = &kWordModelKey;
                 card.layer.borderColor = [UIColor redColor].CGColor;
             }];
             // BUG FIX: use weak self — if user exits within 1.2s VC may be deallocated
+            __weak typeof(self) weakSelf = self;
             __weak UIButton *weakCard = card;
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                __strong typeof(self) strongSelf = self;
+                __strong typeof(weakSelf) strongSelf = weakSelf;
                 __strong UIButton *strongCard = weakCard;
                 if (!strongSelf || !strongCard) return;
                 [strongSelf sendCardBackToBench:strongCard];

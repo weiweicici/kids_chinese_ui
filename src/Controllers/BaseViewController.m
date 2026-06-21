@@ -43,12 +43,10 @@
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     [self logMemoryFootprint:@"Memory Warning Received"];
-    
-    // Custom iOS 9 view unloading helper to save RAM
-    if (self.isViewLoaded && self.view.window == nil) {
-        self.canvasView = nil;
-        self.view = nil;
-    }
+    // NOTE: Do NOT nil out self.view here — our viewDidLoad sets up
+    // one-shot UI and cannot safely rebuild after view unload on iOS 9.
+    // The app already has a small memory footprint (~13-15 MB), so this
+    // guard is unnecessary and risks a blank screen on reload.
 }
 
 - (void)logMemoryFootprint:(NSString *)tag {

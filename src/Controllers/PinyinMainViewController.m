@@ -1285,12 +1285,13 @@
         [self saveGameProgress];
         [self updateFooterProgress];
         
-        // Check if all 16 words have been filled
+        // Check if all words (may be fewer than 16 in last lessons) have been filled
+        NSUInteger wordCount = self.words.count;
         __weak typeof(self) weakSelf = self;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (strongSelf && strongSelf.fullSpell) {
-                if (strongSelf.userInputs.count >= 16) {
+                if (strongSelf.userInputs.count >= wordCount) {
                     [strongSelf fullSpellEvaluate];
                 } else {
                     [strongSelf closePopupAndContinue];
@@ -1319,8 +1320,16 @@
     UILabel *pyLbl = self.pinyinLabels[gridPos];
     self.totalAttempts++;
 
+    // Check if this word was previously wrong (being corrected)
+    id prevResult = self.charResults[@(idx)] ?: self.charResults[[NSString stringWithFormat:@"%ld", (long)idx]];
+    BOOL wasPreviouslyWrong = prevResult && [prevResult[@"result"] isEqualToString:@"wrong"];
+
     if (correct) {
-        self.correctCount++;
+        // Only increment correctCount if this is a first-time correct (not a re-correct of wrong)
+        // remainingIndices still contains idx → this is a new correct answer
+        if ([self.remainingIndices containsObject:@(idx)]) {
+            self.correctCount++;
+        }
         self.popupResultBar.backgroundColor = [UIColor colorWithRed:0.2f green:0.8f blue:0.3f alpha:0.3f];
         [[AudioManager sharedManager] playSoundNamed:@"nizhenbang.caf"];
 
@@ -1331,10 +1340,13 @@
 
         self.charResults[@(idx)] = @{@"result": @"correct", @"input": input};
         [self.remainingIndices removeObject:@(idx)];
-        
+
+        // Advance gameStep only when answering the CURRENT target word
         if (idx == self.currentTargetIdx) {
             self.gameStep++;
         }
+        // If correcting a previously-wrong non-current word, no gameStep change needed;
+        // audio will continue normally with playCurrentTargetAudio.
     } else {
         self.popupResultBar.backgroundColor = [UIColor colorWithRed:1.0f green:0.2f blue:0.2f alpha:0.3f];
         [[AudioManager sharedManager] playSoundNamed:@"jixujiayou.caf"];
@@ -1345,7 +1357,9 @@
         pyLbl.font = [UIFont boldSystemFontOfSize:24];
 
         self.charResults[@(idx)] = @{@"result": @"wrong", @"input": input};
-        
+
+        // Only advance gameStep for the current target (wrong on non-target means user
+        // clicked a red cell to retry — do NOT skip the current target).
         if (idx == self.currentTargetIdx) {
             self.gameStep++;
         }
@@ -1353,7 +1367,7 @@
 
     [self updateFooterProgress];
 
-    // BUG FIX: use weak self — if user exits game in 2s window VC may be deallocated
+    // Use __weak to avoid retaining VC if user exits before the 2s timer fires
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         PinyinMainViewController *strongSelf = weakSelf;
@@ -1395,7 +1409,9 @@
         return;
     }
 
-    if (self.correctCount >= 16 || self.remainingIndices.count == 0) {
+    // Use remainingIndices as the authoritative game-over signal;
+    // correctCount can be imprecise during error-correction retries.
+    if (self.remainingIndices.count == 0) {
         [self finishGame];
     } else {
         [self playCurrentTargetAudio];
@@ -1520,8 +1536,9 @@
         return;
     }
     
-    // Show result alert
-    NSString *message = [NSString stringWithFormat:@"已完成 16/16\n其中 %ld 个正确，%ld 个错误\n请修改后重新检查",
+    // Show result alert — totalChecked is the actual number of words evaluated
+    NSString *message = [NSString stringWithFormat:@"已检查 %ld/%ld 个字\n其中 %ld 个正确，%ld 个错误\n请修改错误字后重新检查",
+                         (long)totalChecked, (long)self.words.count,
                          (long)correctWords, (long)wrongCount];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"检查结果"
                                                                    message:message
@@ -1535,8 +1552,10 @@
     [self showConfetti];
     [self saveGameProgress];
 
+    // Use __weak to avoid retaining self past VC lifecycle (user may navigate away)
+    __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        [self exitGame];
+        [weakSelf exitGame];
     });
 }
 

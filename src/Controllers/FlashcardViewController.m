@@ -102,11 +102,11 @@
     [topNavBar addSubview:startBtn];
 
     SquishyButton *backBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(584.0f, 16.0f, 110.0f, 48.0f)
-                                                  backgroundColor:[self primaryContainerColor]
-                                                      shadowColor:[self primaryColor]
+                                                  backgroundColor:[self surfaceContainerColor]
+                                                      shadowColor:[self onSurfaceVariantColor]
                                                      cornerRadius:24.0f];
     [backBtn setTitle:@"返回" forState:UIControlStateNormal];
-    [backBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+    [backBtn setTitleColor:[self onSurfaceVariantColor] forState:UIControlStateNormal];
     backBtn.titleLabel.font = [self fontWithName:@"Plus Jakarta Sans" size:16.0f];
     [backBtn addTarget:self action:@selector(backBtnClicked) forControlEvents:UIControlEventTouchUpInside];
     [topNavBar addSubview:backBtn];
@@ -148,7 +148,7 @@
 
     // 3. Footer toolbar (frame: 0, 904, 768, 120)
     self.footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 904.0f, 768.0f, 120.0f)];
-    self.footerView.backgroundColor = [self surfaceContainerColor];
+    self.footerView.backgroundColor = [self backgroundColor]; // matches Game2/Game3/PinyinMain
     self.footerView.clipsToBounds = NO;
     self.footerView.layer.shadowColor = [self primaryColor].CGColor;
     self.footerView.layer.shadowOpacity = 0.08f;
@@ -307,7 +307,9 @@
 
 - (WordModel *)gameWordAtPlayIndex:(NSInteger)playIndex {
     if (playIndex < 1 || playIndex > 16) return nil;
-    NSInteger wordIdx = [self actualWordIndex];
+    // Use playIndex directly — actualWordIndex reads self.currentPlayIndex,
+    // so pass the desired index via a local variable.
+    NSInteger wordIdx = [self.shuffledIndices[playIndex - 1] integerValue];
     return [[TextbookManager sharedManager] wordForBook:self.currentBook lesson:self.currentLesson wordIndex:wordIdx];
 }
 
