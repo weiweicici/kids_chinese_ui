@@ -1012,17 +1012,17 @@
     }
     }
 
-    // Dim overlay — remove old first to prevent accumulation
+    // Dim overlay — only for pinyin game mode (audio playing).
+    // Full spell mode needs full contrast so users can read and tap characters.
     if (self.gameDimView) {
         [self.gameDimView removeFromSuperview];
         self.gameDimView = nil;
     }
-    self.gameDimView = [[UIView alloc] initWithFrame:self.canvasView.bounds];
-    self.gameDimView.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.3f];
-    self.gameDimView.userInteractionEnabled = NO;
-    [self.canvasView addSubview:self.gameDimView];
-
     if (!self.fullSpell) {
+        self.gameDimView = [[UIView alloc] initWithFrame:self.canvasView.bounds];
+        self.gameDimView.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.3f];
+        self.gameDimView.userInteractionEnabled = NO;
+        [self.canvasView addSubview:self.gameDimView];
         [self playCurrentTargetAudio];
     }
 }
@@ -1815,7 +1815,15 @@
     [self rebuildPickerLessonsGridInsideContainer:lessonsGrid];
 
     [self.pickerOverlay addSubview:container];
+
+    // Hide footerView before showing picker — prevents it from bleeding through
+    // the overlay regardless of z-order (footerView was added early in setupUI
+    // and may sit below game-mode dynamic views that get bringSubviewToFront'd).
+    self.footerView.hidden = YES;
+
     [self.canvasView addSubview:self.pickerOverlay];
+    // Belt-and-suspenders: ensure overlay is always the topmost view.
+    [self.canvasView bringSubviewToFront:self.pickerOverlay];
 
     container.transform = CGAffineTransformMakeScale(0.8f, 0.8f);
     self.pickerOverlay.alpha = 0.0f;
@@ -1881,6 +1889,8 @@
         } completion:^(BOOL finished) {
             [self.pickerOverlay removeFromSuperview];
             self.pickerOverlay = nil;
+            // Restore footerView — hidden in showLessonPicker
+            self.footerView.hidden = NO;
         }];
     }
 }
