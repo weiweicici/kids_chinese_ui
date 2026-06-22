@@ -21,14 +21,24 @@
 
 // 进度 tab data
 @property (strong, nonatomic) NSArray *progressRecords;
-@property (strong, nonatomic) NSArray *filteredRecords; // For search filter
+@property (strong, nonatomic) NSArray *filteredRecords; // For search filter/selection filter
 @property (strong, nonatomic) NSString *searchQuery;
+
+// Dropdown filter selections
+@property (strong, nonatomic) NSArray *classesList;
+@property (strong, nonatomic) NSString *selectedClass;      // e.g. @"一年级一班", or @"全部班级"
+@property (strong, nonatomic) NSArray *studentsInSelectedClass;
+@property (strong, nonatomic) NSString *selectedStudentId; // e.g. userId, or nil for @"全班同学"
 
 // Left Side Dashboard widgets for Progress tab
 @property (strong, nonatomic) UIView *leftDashboardView;
 @property (strong, nonatomic) UISearchBar *searchBar;
 @property (strong, nonatomic) UILabel *topStudentsLabel;
 @property (strong, nonatomic) UILabel *topWordsLabel;
+
+// Dynamic filter buttons
+@property (strong, nonatomic) SquishyButton *classSelectBtn;
+@property (strong, nonatomic) SquishyButton *studentSelectBtn;
 
 @end
 
@@ -93,13 +103,28 @@
     [self.segControl addTarget:self action:@selector(tabChanged:) forControlEvents:UIControlEventValueChanged];
     [self.canvasView addSubview:self.segControl];
 
-    // Search bar (Progress tab only, default hidden/offscreen)
-    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(328.0f, 135.0f, 400.0f, 44.0f)];
-    self.searchBar.delegate = self;
-    self.searchBar.placeholder = @"搜索学生姓名或账号...";
-    self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
-    self.searchBar.hidden = YES;
-    [self.canvasView addSubview:self.searchBar];
+    // Dropdown Selection Buttons (Progress tab only, default hidden)
+    self.classSelectBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(328.0f, 135.0f, 190.0f, 44.0f)
+                                               backgroundColor:[self surfaceContainerColor]
+                                                   shadowColor:[self onSurfaceVariantColor]
+                                                  cornerRadius:12.0f];
+    [self.classSelectBtn setTitle:@"班级: 全部 ▼" forState:UIControlStateNormal];
+    [self.classSelectBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+    self.classSelectBtn.titleLabel.font = [UIFont systemFontOfSize:14.0f];
+    [self.classSelectBtn addTarget:self action:@selector(classSelectTapped) forControlEvents:UIControlEventTouchUpInside];
+    self.classSelectBtn.hidden = YES;
+    [self.canvasView addSubview:self.classSelectBtn];
+
+    self.studentSelectBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(538.0f, 135.0f, 190.0f, 44.0f)
+                                                  backgroundColor:[self surfaceContainerColor]
+                                                      shadowColor:[self onSurfaceVariantColor]
+                                                     cornerRadius:12.0f];
+    [self.studentSelectBtn setTitle:@"学生: 全班 ▼" forState:UIControlStateNormal];
+    [self.studentSelectBtn setTitleColor:[self onSurfaceColor] forState:UIControlStateNormal];
+    self.studentSelectBtn.titleLabel.font = [UIFont systemFontOfSize:14.0f];
+    [self.studentSelectBtn addTarget:self action:@selector(studentSelectTapped) forControlEvents:UIControlEventTouchUpInside];
+    self.studentSelectBtn.hidden = YES;
+    [self.canvasView addSubview:self.studentSelectBtn];
 
     // Left Dashboard Panel (Progress tab only, default hidden)
     self.leftDashboardView = [[UIView alloc] initWithFrame:CGRectMake(40.0f, 135.0f, 268.0f, 845.0f)];
@@ -112,35 +137,35 @@
 
     // Left Dashboard Subviews
     UILabel *boardTitle = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 16.0f, 236.0f, 30.0f)];
-    boardTitle.text = @"📊 重点教学监测";
+    boardTitle.text = @"📊 班级学情诊断";
     boardTitle.font = [UIFont boldSystemFontOfSize:18.0f];
     boardTitle.textColor = [self primaryColor];
     [self.leftDashboardView addSubview:boardTitle];
 
-    // Top 3 Students
+    // Top 5 Diligent Students
     UILabel *stHeader = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 60.0f, 236.0f, 24.0f)];
-    stHeader.text = @"⚠️ 需关注学生 (错题Top 3)";
+    stHeader.text = @"⏱️ 勤奋榜 (在线时长Top 5)";
     stHeader.font = [UIFont boldSystemFontOfSize:14.0f];
-    stHeader.textColor = [self colorFromHex:@"#ba1a1a"]; // Red warning
+    stHeader.textColor = [self primaryColor];
     [self.leftDashboardView addSubview:stHeader];
 
-    self.topStudentsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 90.0f, 236.0f, 150.0f)];
+    self.topStudentsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 88.0f, 236.0f, 140.0f)];
     self.topStudentsLabel.numberOfLines = 0;
-    self.topStudentsLabel.font = [UIFont systemFontOfSize:14.0f];
+    self.topStudentsLabel.font = [UIFont systemFontOfSize:13.0f];
     self.topStudentsLabel.textColor = [self onSurfaceColor];
     self.topStudentsLabel.text = @"暂无统计数据";
     [self.leftDashboardView addSubview:self.topStudentsLabel];
 
-    // Top 3 Difficult Words
-    UILabel *wdHeader = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 260.0f, 236.0f, 24.0f)];
-    wdHeader.text = @"📈 高频错字 (全班盲区Top 5)";
+    // Top 10 Difficult Words
+    UILabel *wdHeader = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 245.0f, 236.0f, 24.0f)];
+    wdHeader.text = @"📈 班级错字榜 (盲区Top 10)";
     wdHeader.font = [UIFont boldSystemFontOfSize:14.0f];
-    wdHeader.textColor = [self secondaryContainerColor];
+    wdHeader.textColor = [self colorFromHex:@"#ba1a1a"]; // Red warning
     [self.leftDashboardView addSubview:wdHeader];
 
-    self.topWordsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 290.0f, 236.0f, 300.0f)];
+    self.topWordsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 275.0f, 236.0f, 550.0f)];
     self.topWordsLabel.numberOfLines = 0;
-    self.topWordsLabel.font = [UIFont systemFontOfSize:14.0f];
+    self.topWordsLabel.font = [UIFont systemFontOfSize:13.0f];
     self.topWordsLabel.textColor = [self onSurfaceColor];
     self.topWordsLabel.text = @"暂无统计数据";
     [self.leftDashboardView addSubview:self.topWordsLabel];
@@ -187,18 +212,21 @@
     self.filteredRecords = nil;
     self.profilesMap = nil;
     self.searchQuery = nil;
-    self.searchBar.text = @"";
+    self.selectedClass = nil;
+    self.selectedStudentId = nil;
     [self.tableView reloadData];
 
-    // Layout layout adjustments for different tabs
+    // Layout adjustments for different tabs
     if (self.currentTab == 1) {
         self.tableView.frame = CGRectMake(328.0f, 190.0f, 400.0f, 790.0f);
         self.leftDashboardView.hidden = NO;
-        self.searchBar.hidden = NO;
+        self.classSelectBtn.hidden = NO;
+        self.studentSelectBtn.hidden = NO;
     } else {
         self.tableView.frame = CGRectMake(40.0f, 140.0f, 688.0f, 840.0f);
         self.leftDashboardView.hidden = YES;
-        self.searchBar.hidden = YES;
+        self.classSelectBtn.hidden = YES;
+        self.studentSelectBtn.hidden = YES;
     }
 
     // Teachers can only access progress tab
@@ -352,24 +380,104 @@
 }
 
 - (void)updateStatisticsAndFilter {
-    // 1. Calculate Statistics
-    NSMutableDictionary *studentErrCounts = [NSMutableDictionary dictionary];
-    NSCountedSet *wordErrCounts = [[NSCountedSet alloc] init];
-
-    for (NSDictionary *rec in self.progressRecords) {
-        NSString *userId = rec[@"user_id"];
-        NSString *feature = rec[@"feature"];
-        
-        // Skip system metrics for error statistics
-        if ([feature isEqualToString:@"system"]) {
-            continue;
+    // 1. Resolve Class List and Current Selected Class
+    NSString *currentUserId = [[SupabaseClient sharedClient] currentUserIdFromToken];
+    NSDictionary *currentUserProfile = self.profilesMap[currentUserId];
+    NSString *myClass = currentUserProfile[@"class_name"] ?: @"一年级一班";
+    
+    NSMutableSet *classSet = [NSMutableSet set];
+    for (NSDictionary *p in self.profilesMap.allValues) {
+        NSString *cls = p[@"class_name"];
+        if (cls && cls.length > 0) {
+            [classSet addObject:cls];
         }
-
+    }
+    
+    NSMutableArray *classes = [NSMutableArray arrayWithArray:[classSet allObjects]];
+    [classes sortUsingSelector:@selector(localizedCompare:)];
+    if (self.isAdmin) {
+        [classes insertObject:@"全部班级" atIndex:0];
+    }
+    self.classesList = classes;
+    
+    if (!self.selectedClass) {
+        self.selectedClass = self.isAdmin ? @"全部班级" : myClass;
+    }
+    
+    [self.classSelectBtn setTitle:[NSString stringWithFormat:@"班级: %@ ▼", self.selectedClass] forState:UIControlStateNormal];
+    self.classSelectBtn.enabled = self.isAdmin; // Only admin can switch classes
+    
+    // 2. Resolve Students In Selected Class
+    NSMutableArray *classStudents = [NSMutableArray array];
+    for (NSDictionary *p in self.profilesMap.allValues) {
+        NSString *role = p[@"role"];
+        // Only include students
+        if ([role isEqualToString:@"student"] || !role) {
+            NSString *cls = p[@"class_name"];
+            if ([self.selectedClass isEqualToString:@"全部班级"] || [cls isEqualToString:self.selectedClass]) {
+                [classStudents addObject:p];
+            }
+        }
+    }
+    [classStudents sortUsingComparator:^NSComparisonResult(NSDictionary *p1, NSDictionary *p2) {
+        NSString *n1 = p1[@"display_name"] ?: p1[@"username"] ?: @"";
+        NSString *n2 = p2[@"display_name"] ?: p2[@"username"] ?: @"";
+        return [n1 localizedCompare:n2];
+    }];
+    self.studentsInSelectedClass = classStudents;
+    
+    // Validate Selected Student
+    if (self.selectedStudentId) {
+        BOOL found = NO;
+        for (NSDictionary *p in self.studentsInSelectedClass) {
+            if ([p[@"id"] isEqualToString:self.selectedStudentId]) {
+                found = YES;
+                [self.studentSelectBtn setTitle:[NSString stringWithFormat:@"学生: %@ ▼", p[@"display_name"] ?: p[@"username"]] forState:UIControlStateNormal];
+                break;
+            }
+        }
+        if (!found) {
+            self.selectedStudentId = nil;
+            [self.studentSelectBtn setTitle:@"学生: 全班同学 ▼" forState:UIControlStateNormal];
+        }
+    } else {
+        [self.studentSelectBtn setTitle:@"学生: 全班同学 ▼" forState:UIControlStateNormal];
+    }
+    
+    // 3. Compute Top 5 Diligent & Top 10 Difficult Words (Within active class filter)
+    NSMutableDictionary *studentDurations = [NSMutableDictionary dictionary];
+    NSCountedSet *wordErrCounts = [[NSCountedSet alloc] init];
+    
+    // Build set of user_ids in active class
+    NSMutableSet *activeUserIds = [NSMutableSet set];
+    for (NSDictionary *p in self.studentsInSelectedClass) {
+        if (p[@"id"]) [activeUserIds addObject:p[@"id"]];
+    }
+    
+    for (NSDictionary *rec in self.progressRecords) {
+        NSString *uid = rec[@"user_id"];
+        if (![activeUserIds containsObject:uid]) {
+            continue; // Skip progress outside selected class
+        }
+        
+        NSString *feature = rec[@"feature"];
         NSArray *telemetry = rec[@"telemetry_data"];
-        if ([telemetry isKindOfClass:[NSArray class]] && telemetry.count > 0) {
-            NSInteger currentCount = [studentErrCounts[userId] integerValue];
-            studentErrCounts[userId] = @(currentCount + telemetry.count);
-
+        if (![telemetry isKindOfClass:[NSArray class]]) continue;
+        
+        if ([feature isEqualToString:@"system"]) {
+            // Accumulate durations
+            double durationSecs = 0;
+            for (NSDictionary *event in telemetry) {
+                if ([event[@"error_type"] isEqualToString:@"duration"]) {
+                    durationSecs += [event[@"wrong_input"] doubleValue];
+                }
+            }
+            if (durationSecs > 0) {
+                double total = [studentDurations[uid] doubleValue];
+                studentDurations[uid] = @(total + durationSecs);
+            }
+        } else {
+            // Accumulate word errors
             for (NSDictionary *event in telemetry) {
                 NSString *word = event[@"target_word"];
                 if (word && word.length > 0) {
@@ -378,39 +486,40 @@
             }
         }
     }
-
-    // Sort Top 3 Students
-    NSArray *sortedUsers = [studentErrCounts.allKeys sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
-        NSNumber *val1 = studentErrCounts[obj1];
-        NSNumber *val2 = studentErrCounts[obj2];
-        return [val2 compare:val1]; // Descending
+    
+    // Render Top 5 Diligent Students
+    NSArray *sortedUsers = [studentDurations.allKeys sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+        return [studentDurations[obj2] compare:studentDurations[obj1]]; // Descending
     }];
-
     NSMutableString *studentsText = [NSMutableString string];
-    NSInteger stLimit = MIN(3, sortedUsers.count);
+    NSInteger stLimit = MIN(5, sortedUsers.count);
     if (stLimit == 0) {
-        [studentsText appendString:@"暂无错题学生"];
+        [studentsText appendString:@"暂无在线时长记录"];
     } else {
         for (NSInteger i = 0; i < stLimit; i++) {
             NSString *uid = sortedUsers[i];
             NSDictionary *profile = self.profilesMap[uid];
             NSString *name = profile[@"display_name"] ?: profile[@"username"] ?: @"未知学生";
-            [studentsText appendFormat:@"%ld. %@ (%@次错题)\n", (long)(i + 1), name, studentErrCounts[uid]];
+            double mins = [studentDurations[uid] doubleValue] / 60.0;
+            if (mins >= 60.0) {
+                [studentsText appendFormat:@"%ld. %@ (%.1f小时)\n", (long)(i + 1), name, mins / 60.0];
+            } else {
+                [studentsText appendFormat:@"%ld. %@ (%.0f分钟)\n", (long)(i + 1), name, mins];
+            }
         }
     }
     self.topStudentsLabel.text = studentsText;
-
-    // Sort Top 5 Words
+    
+    // Render Top 10 Difficult Words
     NSArray *sortedWords = [[wordErrCounts allObjects] sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
         NSUInteger count1 = [wordErrCounts countForObject:obj1];
         NSUInteger count2 = [wordErrCounts countForObject:obj2];
         return [@(count2) compare:@(count1)]; // Descending
     }];
-
     NSMutableString *wordsText = [NSMutableString string];
-    NSInteger wdLimit = MIN(5, sortedWords.count);
+    NSInteger wdLimit = MIN(10, sortedWords.count);
     if (wdLimit == 0) {
-        [wordsText appendString:@"暂无高频错字数据"];
+        [wordsText appendString:@"全班暂无错字盲区"];
     } else {
         for (NSInteger i = 0; i < wdLimit; i++) {
             NSString *word = sortedWords[i];
@@ -419,39 +528,90 @@
         }
     }
     self.topWordsLabel.text = wordsText;
-
-    // 2. Perform Search Filtering
-    if (self.searchQuery && self.searchQuery.length > 0) {
-        NSMutableArray *filtered = [NSMutableArray array];
-        NSString *query = [self.searchQuery lowercaseString];
-        for (NSDictionary *rec in self.progressRecords) {
-            NSString *userId = rec[@"user_id"];
-            NSDictionary *profile = self.profilesMap[userId];
-            NSString *displayName = [[profile[@"display_name"] ?: @"" lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            NSString *username = [[profile[@"username"] ?: @"" lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            
-            if ([displayName containsString:query] || [username containsString:query]) {
+    
+    // 4. Perform selection filter
+    NSMutableArray *filtered = [NSMutableArray array];
+    for (NSDictionary *rec in self.progressRecords) {
+        NSString *uid = rec[@"user_id"];
+        NSString *feature = rec[@"feature"];
+        
+        // Hide session logs from raw table list to keep it focused on learning achievements
+        if ([feature isEqualToString:@"system"]) {
+            continue;
+        }
+        
+        if (self.selectedStudentId) {
+            // View single student
+            if ([uid isEqualToString:self.selectedStudentId]) {
+                [filtered addObject:rec];
+            }
+        } else {
+            // View class students
+            if ([activeUserIds containsObject:uid]) {
                 [filtered addObject:rec];
             }
         }
-        self.filteredRecords = filtered;
-    } else {
-        self.filteredRecords = self.progressRecords;
     }
-
+    self.filteredRecords = filtered;
     [self.tableView reloadData];
 }
 
-#pragma mark - UISearchBarDelegate
+#pragma mark - Dropdown Action Handlers
 
-- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
-    self.searchQuery = [searchText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    [self updateStatisticsAndFilter];
+- (void)classSelectTapped {
+    if (self.classesList.count == 0) return;
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"切换班级"
+                                                                   message:nil
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    for (NSString *cls in self.classesList) {
+        [alert addAction:[UIAlertAction actionWithTitle:cls style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            self.selectedClass = cls;
+            self.selectedStudentId = nil; // Clear student selection
+            [self updateStatisticsAndFilter];
+        }]];
+    }
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    
+    // Handle iPad popover compatibility
+    alert.popoverPresentationController.sourceView = self.classSelectBtn;
+    alert.popoverPresentationController.sourceRect = self.classSelectBtn.bounds;
+    
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
-    [searchBar resignFirstResponder];
+- (void)studentSelectTapped {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"选择学生"
+                                                                   message:nil
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:@"全班同学" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        self.selectedStudentId = nil;
+        [self updateStatisticsAndFilter];
+    }]];
+    
+    for (NSDictionary *p in self.studentsInSelectedClass) {
+        NSString *name = p[@"display_name"] ?: p[@"username"] ?: @"未知学生";
+        NSString *uid = p[@"id"];
+        [alert addAction:[UIAlertAction actionWithTitle:name style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            self.selectedStudentId = uid;
+            [self updateStatisticsAndFilter];
+        }]];
+    }
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    
+    // Handle iPad popover compatibility
+    alert.popoverPresentationController.sourceView = self.studentSelectBtn;
+    alert.popoverPresentationController.sourceRect = self.studentSelectBtn.bounds;
+    
+    [self presentViewController:alert animated:YES completion:nil];
 }
+
+#pragma mark - Custom Action Handlers
+// (Placeholder methods required by headers)
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {}
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {}
 
 #pragma mark - Approve / Reject
 
