@@ -1018,17 +1018,12 @@
     }
     }
 
-    // Dim overlay — only for pinyin game mode (audio playing).
-    // Full spell mode needs full contrast so users can read and tap characters.
+    // Dim overlay — removed to fix low contrast issues.
     if (self.gameDimView) {
         [self.gameDimView removeFromSuperview];
         self.gameDimView = nil;
     }
     if (!self.fullSpell) {
-        self.gameDimView = [[UIView alloc] initWithFrame:self.canvasView.bounds];
-        self.gameDimView.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.3f];
-        self.gameDimView.userInteractionEnabled = NO;
-        [self.canvasView addSubview:self.gameDimView];
         [self playCurrentTargetAudio];
     }
 }
@@ -1181,7 +1176,9 @@
     self.popupCard.layer.shadowOffset = CGSizeMake(0, 4);
 
     // Disable dim underneath while card is shown
-    self.gameDimView.userInteractionEnabled = YES;
+    if (self.gameDimView) {
+        self.gameDimView.userInteractionEnabled = YES;
+    }
 
     // [确认] [返回] at top
     UIButton *confirmBtn = [UIButton buttonWithType:UIButtonTypeCustom];
