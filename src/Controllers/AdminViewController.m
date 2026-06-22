@@ -615,7 +615,7 @@
 
 #pragma mark - Approve / Reject
 
-- (void)approveRequest:(NSString *)requestId userId:(NSString *)userId {
+- (void)approveRequest:(NSString *)requestId userId:(NSString *)userId className:(NSString *)className {
     [self.spinner startAnimating];
 
     // Update registration_requests status
@@ -629,9 +629,14 @@
             });
             return;
         }
-        // Update profile
+        // Update profile with approved state and class_name
         NSString *profPath = [NSString stringWithFormat:@"/rest/v1/profiles?id=eq.%@", userId];
-        [[SupabaseClient sharedClient] PATCH:profPath body:@{@"is_approved": @YES, @"role": @"student"}
+        NSDictionary *body = @{
+            @"is_approved": @YES,
+            @"role": @"student",
+            @"class_name": className ?: @"一年级一班"
+        };
+        [[SupabaseClient sharedClient] PATCH:profPath body:body
                                   completion:^(NSDictionary *resp2, NSError *error2) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self.spinner stopAnimating];
@@ -639,7 +644,7 @@
                     [self showAlert:@"审批失败" message:error2.localizedDescription];
                     return;
                 }
-                [self showAlert:@"审批成功" message:@"已批准该学生注册"];
+                [self showAlert:@"审批成功" message:[NSString stringWithFormat:@"已批准该学生并分配至: %@", className ?: @"一年级一班"]];
                 [self loadPendingApprovals];
             });
         }];
@@ -813,15 +818,59 @@
 
 - (void)cellApproveTapped:(UIButton *)sender {
     NSDictionary *req = self.pendingRequests[sender.tag];
-    NSString *alertMsg = [NSString stringWithFormat:@"确定批准该学生的注册申请？"];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"确认审批"
-                                                                   message:alertMsg
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"批准" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        [self approveRequest:req[@"id"] userId:req[@"user_id"]];
+    NSString *requestId = req[@"id"];
+    NSString *userId = req[@"user_id"];
+    
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"批准注册 - 选择班级"
+                                                                   message:@"请选择将该学生分配到哪个班级："
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    // Extract actual classes (skip "全部班级" placeholder)
+    NSMutableArray *realClasses = [NSMutableArray array];
+    for (NSString *cls in self.classesList) {
+        if (![cls isEqualToString:@"全部班级"]) {
+            [realClasses addObject:cls];
+        }
+    }
+    
+    // If no custom classes exist yet, provide default option
+    if (realClasses.count == 0) {
+        [realClasses addObject:@"一年级一班"];
+    }
+    
+    for (NSString *cls in realClasses) {
+        [sheet addAction:[UIAlertAction actionWithTitle:cls style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            [self approveRequest:requestId userId:userId className:cls];
+        }]];
+    }
+    
+    // Add option to create a new class name
+    [sheet addAction:[UIAlertAction actionWithTitle:@"[ 新开一个班级... ]" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+        UIAlertController *inputAlert = [UIAlertController alertControllerWithTitle:@"创建新班级"
+                                                                            message:@"请输入新班级的名字（如：一年级三班）"
+                                                                     preferredStyle:UIAlertControllerStyleAlert];
+        [inputAlert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+            textField.placeholder = @"新班级名字";
+        }];
+        [inputAlert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+        [inputAlert addAction:[UIAlertAction actionWithTitle:@"确认创建并分配" style:UIAlertActionStyleDefault handler:^(UIAlertAction *subAction) {
+            UITextField *field = inputAlert.textFields.firstObject;
+            NSString *newClass = [field.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            if (newClass.length == 0) {
+                newClass = @"一年级一班";
+            }
+            [self approveRequest:requestId userId:userId className:newClass];
+        }]];
+        [self presentViewController:inputAlert animated:YES completion:nil];
     }]];
-    [self presentViewController:alert animated:YES completion:nil];
+    
+    [sheet addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    
+    // Safeguard iPad popover presentation anchors
+    sheet.popoverPresentationController.sourceView = sender;
+    sheet.popoverPresentationController.sourceRect = sender.bounds;
+    
+    [self presentViewController:sheet animated:YES completion:nil];
 }
 
 - (void)cellRejectTapped:(UIButton *)sender {
