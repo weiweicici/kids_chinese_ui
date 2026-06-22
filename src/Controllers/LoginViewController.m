@@ -3,6 +3,7 @@
 #import "HomeScreenViewController.h"
 #import "AppNavigationController.h"
 #import "SquishyButton.h"
+#import "TelemetryManager.h"
 
 static NSString *const kSupabaseURL = @"https://mwsapokofskjwaynnvas.supabase.co";
 static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13c2Fwb2tvZnNrandheW5udmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDE4OTUsImV4cCI6MjA5NzU3Nzg5NX0.Cw6hXnPkw_hyC6BOxVRVqe2dWL7k8jcMAtHvmKkfesE";
@@ -277,6 +278,15 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
                 [self showPendingApprovalAlert];
                 return;
             }
+            // 记录用户成功登录的 telemetry 系统事件并立刻刷新同步
+            [[TelemetryManager sharedManager] recordEventWithFeature:@"system"
+                                                          targetWord:@""
+                                                          wrongInput:@""
+                                                           errorType:@"login"
+                                                                book:1
+                                                              lesson:1];
+            [[TelemetryManager sharedManager] flushAndSync];
+            
             [self proceedToHome];
         });
     }];

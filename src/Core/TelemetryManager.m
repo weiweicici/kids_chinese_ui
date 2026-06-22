@@ -6,6 +6,7 @@
     dispatch_queue_t _queue;
     NSMutableDictionary *_buffers; // feature -> NSMutableArray of event dicts
     NSInteger _totalBufferedCount;
+    NSDate *_sessionStartTime;
 }
 @end
 
@@ -27,11 +28,18 @@
         _queue = dispatch_queue_create("com.kidschinese.telemetry", DISPATCH_QUEUE_SERIAL);
         _buffers = [NSMutableDictionary dictionary];
         _totalBufferedCount = 0;
+        _sessionStartTime = [NSDate date];
         
         // 监听应用退到后台的通知，在退到后台前强制落盘与同步
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(handleAppBackground)
                                                      name:UIApplicationDidEnterBackgroundNotification
+                                                   object:nil];
+        
+        // 监听应用回到前台的通知，刷新会话计时起点
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(handleAppForeground)
+                                                     name:UIApplicationWillEnterForegroundNotification
                                                    object:nil];
     }
     return self;
@@ -90,6 +98,31 @@
         NSString *userId = [[SupabaseClient sharedClient] currentUserIdFromToken];
         if (!userId || userId.length == 0) return;
         
+        // 自动计算本次在线学习/使用时长
+        if (self->_sessionStartTime) {
+            NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:self->_sessionStartTime];
+            if (elapsed > 1.0f) {
+                NSString *durationStr = [NSString stringWithFormat:@"%.0f", elapsed];
+                // 记录进入 "system" 模块的 "duration" 类型的日志，book=1, lesson=1 占位
+                NSMutableArray *featureBuffer = self->_buffers[@"system"];
+                if (!featureBuffer) {
+                    featureBuffer = [NSMutableArray array];
+                    self->_buffers[@"system"] = featureBuffer;
+                }
+                NSDictionary *event = @{
+                    @"target_word": @"",
+                    @"wrong_input": durationStr,
+                    @"error_type": @"duration",
+                    @"timestamp": @((long)[[NSDate date] timeIntervalSince1970])
+                };
+                [featureBuffer addObject:event];
+                self->_totalBufferedCount++;
+                [self storeLastPositionForFeature:@"system" book:1 lesson:1 userId:userId];
+            }
+            // 重新开始计时
+            self->_sessionStartTime = [NSDate date];
+        }
+        
         // 1. 将当前内存中缓存的所有事件强制刷入 UserDefaults
         if (self->_totalBufferedCount > 0) {
             [self localFlushWithUserId:userId];
@@ -104,6 +137,12 @@
 
 - (void)handleAppBackground {
     [self flushAndSync];
+}
+
+- (void)handleAppForeground {
+    dispatch_async(_queue, ^{
+        self->_sessionStartTime = [NSDate date];
+    });
 }
 
 - (void)storeLastPositionForFeature:(NSString *)feature book:(NSInteger)book lesson:(NSInteger)lesson userId:(NSString *)userId {

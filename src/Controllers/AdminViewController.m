@@ -426,21 +426,47 @@
         else if ([feature isEqualToString:@"pinyin_hard"]) featureName = @"拼音(难)";
         else if ([feature isEqualToString:@"fullspell_easy"]) featureName = @"填音(易)";
         else if ([feature isEqualToString:@"fullspell_hard"]) featureName = @"填音(难)";
+        else if ([feature isEqualToString:@"system"]) featureName = @"系统会话";
 
         NSArray *telemetry = rec[@"telemetry_data"];
-        NSInteger errCount = 0;
-        if ([telemetry isKindOfClass:[NSArray class]]) {
-            errCount = telemetry.count;
-        }
-
+        
         NSString *updatedAt = rec[@"updated_at"] ?: @"";
         if (updatedAt.length > 16) {
             updatedAt = [updatedAt substringWithRange:NSMakeRange(5, 11)];
             updatedAt = [updatedAt stringByReplacingOccurrencesOfString:@"T" withString:@" "];
         }
 
-        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · 第%ld册 第%ld课 · 错题: %ld · %@",
-                                     featureName, (long)book, (long)lesson, (long)errCount, updatedAt];
+        if ([feature isEqualToString:@"system"]) {
+            // 解析系统登录和在线时长事件
+            NSString *lastLoginTime = @"暂无记录";
+            NSString *lastDuration = @"-";
+            if ([telemetry isKindOfClass:[NSArray class]]) {
+                // 从后往前找最近的 login 和 duration
+                for (NSInteger i = (long)telemetry.count - 1; i >= 0; i--) {
+                    NSDictionary *event = telemetry[i];
+                    NSString *errType = event[@"error_type"];
+                    if ([errType isEqualToString:@"login"] && [lastLoginTime isEqualToString:@"暂无记录"]) {
+                        long ts = [event[@"timestamp"] longValue];
+                        NSDate *date = [NSDate dateWithTimeIntervalSince1970:ts];
+                        NSDateFormatter *df = [[NSDateFormatter alloc] init];
+                        [df setDateFormat:@"MM-dd HH:mm"];
+                        lastLoginTime = [df stringFromDate:date];
+                    }
+                    if ([errType isEqualToString:@"duration"] && [lastDuration isEqualToString:@"-"]) {
+                        lastDuration = [NSString stringWithFormat:@"%@秒", event[@"wrong_input"]];
+                    }
+                }
+            }
+            cell.detailTextLabel.text = [NSString stringWithFormat:@"系统会话 · 最近登录: %@ · 最近在线: %@",
+                                         lastLoginTime, lastDuration];
+        } else {
+            NSInteger errCount = 0;
+            if ([telemetry isKindOfClass:[NSArray class]]) {
+                errCount = telemetry.count;
+            }
+            cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · 第%ld册 第%ld课 · 错题: %ld · %@",
+                                         featureName, (long)book, (long)lesson, (long)errCount, updatedAt];
+        }
         cell.detailTextLabel.font = [UIFont systemFontOfSize:14.0f];
         cell.detailTextLabel.textColor = [self onSurfaceVariantColor];
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
@@ -482,31 +508,60 @@
     NSDictionary *rec = self.progressRecords[ip.row];
     NSArray *telemetry = rec[@"telemetry_data"];
     if (![telemetry isKindOfClass:[NSArray class]] || telemetry.count == 0) {
-        [self showAlert:@"无错误记录" message:@"该学生目前没有错题记录！"];
+        [self showAlert:@"无相关记录" message:@"该学生目前没有相关的记录！"];
         return;
     }
 
     NSString *userId = rec[@"user_id"];
     NSDictionary *profile = self.profilesMap[userId];
     NSString *studentName = profile[@"display_name"] ?: profile[@"username"] ?: @"该学生";
+    NSString *feature = rec[@"feature"];
 
-    NSMutableString *details = [NSMutableString string];
-    [details appendFormat:@"最近 %ld 次错题记录：\n\n", (long)telemetry.count];
-
-    NSInteger count = 0;
-    for (NSInteger i = (NSInteger)telemetry.count - 1; i >= 0 && count < 10; i--, count++) {
-        NSDictionary *event = telemetry[i];
-        NSString *word = event[@"target_word"] ?: @"";
-        NSString *wrongInput = event[@"wrong_input"] ?: @"";
+    if ([feature isEqualToString:@"system"]) {
+        NSMutableString *details = [NSMutableString string];
+        [details appendString:@"最近 10 次系统登录与在线时长：\n\n"];
         
-        [details appendFormat:@"%ld. 目标字:【%@】 错填/点错:【%@】\n", (long)(count + 1), word, wrongInput];
-    }
+        NSInteger count = 0;
+        for (NSInteger i = (long)telemetry.count - 1; i >= 0 && count < 10; i--) {
+            NSDictionary *event = telemetry[i];
+            NSString *errType = event[@"error_type"];
+            long ts = [event[@"timestamp"] longValue];
+            NSDate *date = [NSDate dateWithTimeIntervalSince1970:ts];
+            NSDateFormatter *df = [[NSDateFormatter alloc] init];
+            [df setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+            NSString *timeStr = [df stringFromDate:date];
+            
+            if ([errType isEqualToString:@"login"]) {
+                [details appendFormat:@"%ld. 【登录】 时间: %@\n", (long)(count + 1), timeStr];
+                count++;
+            } else if ([errType isEqualToString:@"duration"]) {
+                [details appendFormat:@"%ld. 【在线】 时间: %@ 停留: %@秒\n", (long)(count + 1), timeStr, event[@"wrong_input"]];
+                count++;
+            }
+        }
+        if (telemetry.count > 10) {
+            [details appendString:@"\n* （只显示最近 10 条）"];
+        }
+        [self showAlert:[NSString stringWithFormat:@"%@ 的在线时长详情", studentName] message:details];
+    } else {
+        NSMutableString *details = [NSMutableString string];
+        [details appendFormat:@"最近 %ld 次错题记录：\n\n", (long)telemetry.count];
 
-    if (telemetry.count > 10) {
-        [details appendString:@"\n* （只显示最近 10 条）"];
-    }
+        NSInteger count = 0;
+        for (NSInteger i = (long)telemetry.count - 1; i >= 0 && count < 10; i--, count++) {
+            NSDictionary *event = telemetry[i];
+            NSString *word = event[@"target_word"] ?: @"";
+            NSString *wrongInput = event[@"wrong_input"] ?: @"";
+            
+            [details appendFormat:@"%ld. 目标字:【%@】 错填/点错:【%@】\n", (long)(count + 1), word, wrongInput];
+        }
 
-    [self showAlert:[NSString stringWithFormat:@"%@ 的错题详情", studentName] message:details];
+        if (telemetry.count > 10) {
+            [details appendString:@"\n* （只显示最近 10 条）"];
+        }
+
+        [self showAlert:[NSString stringWithFormat:@"%@ 的错题详情", studentName] message:details];
+    }
 }
 
 @end

@@ -7,8 +7,10 @@
 #import "SupabaseClient.h"
 #import "SquishyButton.h"
 
-@interface HomeScreenViewController ()
-
+@interface HomeScreenViewController () {
+    SquishyButton *_adminBtn;
+    UILabel *_debugLabel;
+}
 @end
 
 @implementation HomeScreenViewController
@@ -118,15 +120,7 @@
     verLabel.textAlignment = NSTextAlignmentCenter;
     [self.canvasView addSubview:verLabel];
 
-    // 5. Debug label — shows cached role (remove after confirming admin works)
-    NSString *debugRole = [[SupabaseClient sharedClient] getCachedRole];
-    UILabel *debugLabel = [[UILabel alloc] initWithFrame:CGRectMake(28.0f, 900.0f, 400.0f, 24.0f)];
-    debugLabel.text = [NSString stringWithFormat:@"Debug role: %@", debugRole ?: @"nil"];
-    debugLabel.font = [UIFont systemFontOfSize:12.0f];
-    debugLabel.textColor = [UIColor grayColor];
-    [self.canvasView addSubview:debugLabel];
-
-    // 6. Logout button (top-left, all users)
+    // 5. Logout button (top-left, all users)
     SquishyButton *logoutBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(28.0f, 30.0f, 72.0f, 40.0f)
                                                     backgroundColor:[self onSurfaceVariantColor]
                                                         shadowColor:[self colorFromHex:@"#2a3531"]
@@ -136,19 +130,41 @@
     logoutBtn.titleLabel.font = [UIFont boldSystemFontOfSize:14.0f];
     [logoutBtn addTarget:self action:@selector(logoutTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.canvasView addSubview:logoutBtn];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    // Clean old dynamic subviews to prevent duplicate adding
+    if (_adminBtn) {
+        [_adminBtn removeFromSuperview];
+        _adminBtn = nil;
+    }
+    if (_debugLabel) {
+        [_debugLabel removeFromSuperview];
+        _debugLabel = nil;
+    }
+
+    NSString *role = [[SupabaseClient sharedClient] getCachedRole];
+
+    // 5. Debug label — shows cached role
+    _debugLabel = [[UILabel alloc] initWithFrame:CGRectMake(28.0f, 900.0f, 400.0f, 24.0f)];
+    _debugLabel.text = [NSString stringWithFormat:@"Debug role: %@", role ?: @"nil"];
+    _debugLabel.font = [UIFont systemFontOfSize:12.0f];
+    _debugLabel.textColor = [UIColor grayColor];
+    [self.canvasView addSubview:_debugLabel];
 
     // 6. Admin button (top-right, only visible when role == admin or teacher)
-    NSString *role = [[SupabaseClient sharedClient] getCachedRole];
     if ([role isEqualToString:@"admin"] || [role isEqualToString:@"teacher"]) {
-        SquishyButton *adminBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(640.0f, 30.0f, 100.0f, 40.0f)
-                                                       backgroundColor:[self secondaryContainerColor]
-                                                           shadowColor:[self colorFromHex:@"#d47d1a"]
-                                                          cornerRadius:12.0f];
-        [adminBtn setTitle:@"管理" forState:UIControlStateNormal];
-        [adminBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        adminBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16.0f];
-        [adminBtn addTarget:self action:@selector(adminTapped) forControlEvents:UIControlEventTouchUpInside];
-        [self.canvasView addSubview:adminBtn];
+        _adminBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(640.0f, 30.0f, 100.0f, 40.0f)
+                                         backgroundColor:[self secondaryContainerColor]
+                                             shadowColor:[self colorFromHex:@"#d47d1a"]
+                                            cornerRadius:12.0f];
+        [_adminBtn setTitle:@"管理" forState:UIControlStateNormal];
+        [_adminBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        _adminBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16.0f];
+        [_adminBtn addTarget:self action:@selector(adminTapped) forControlEvents:UIControlEventTouchUpInside];
+        [self.canvasView addSubview:_adminBtn];
     }
 }
 

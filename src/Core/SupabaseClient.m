@@ -171,6 +171,11 @@ static NSTimeInterval const kRequestTimeout = 15.0;
     [req setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
     [req setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
+    // apikey header is always required by Supabase API gateway
+    if (self.anonKey) {
+        [req setValue:self.anonKey forHTTPHeaderField:@"apikey"];
+    }
+
     // Auth header
     NSString *token = self.tempToken ?: [self getToken];
     self.tempToken = nil; // one-shot
@@ -180,7 +185,6 @@ static NSTimeInterval const kRequestTimeout = 15.0;
     } else if (self.anonKey) {
         [req setValue:[NSString stringWithFormat:@"Bearer %@", self.anonKey]
    forHTTPHeaderField:@"Authorization"];
-        [req setValue:self.anonKey forHTTPHeaderField:@"apikey"];
     }
 
     // Defensive pagination — always limit to 20 rows unless explicitly overridden
