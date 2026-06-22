@@ -4,7 +4,7 @@
 #import "AppNavigationController.h"
 #import "HomeScreenViewController.h"
 
-@interface AdminViewController () <UITableViewDelegate, UITableViewDataSource>
+@interface AdminViewController () <UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate>
 
 @property (strong, nonatomic) UISegmentedControl *segControl;
 @property (strong, nonatomic) UITableView *tableView;
@@ -21,6 +21,14 @@
 
 // 进度 tab data
 @property (strong, nonatomic) NSArray *progressRecords;
+@property (strong, nonatomic) NSArray *filteredRecords; // For search filter
+@property (strong, nonatomic) NSString *searchQuery;
+
+// Left Side Dashboard widgets for Progress tab
+@property (strong, nonatomic) UIView *leftDashboardView;
+@property (strong, nonatomic) UISearchBar *searchBar;
+@property (strong, nonatomic) UILabel *topStudentsLabel;
+@property (strong, nonatomic) UILabel *topWordsLabel;
 
 @end
 
@@ -45,9 +53,9 @@
 
     // Back button
     SquishyButton *backBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(16.0f, 10.0f, 80.0f, 40.0f)
-                                                  backgroundColor:[self primaryContainerColor]
-                                                      shadowColor:[self colorFromHex:@"#004d3f"]
-                                                     cornerRadius:12.0f];
+                                                   backgroundColor:[self primaryContainerColor]
+                                                       shadowColor:[self colorFromHex:@"#004d3f"]
+                                                      cornerRadius:12.0f];
     [backBtn setTitle:@"‹ 返回" forState:UIControlStateNormal];
     [backBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     backBtn.titleLabel.font = [UIFont boldSystemFontOfSize:17.0f];
@@ -85,7 +93,59 @@
     [self.segControl addTarget:self action:@selector(tabChanged:) forControlEvents:UIControlEventValueChanged];
     [self.canvasView addSubview:self.segControl];
 
-    // Table view
+    // Search bar (Progress tab only, default hidden/offscreen)
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(328.0f, 135.0f, 400.0f, 44.0f)];
+    self.searchBar.delegate = self;
+    self.searchBar.placeholder = @"搜索学生姓名或账号...";
+    self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
+    self.searchBar.hidden = YES;
+    [self.canvasView addSubview:self.searchBar];
+
+    // Left Dashboard Panel (Progress tab only, default hidden)
+    self.leftDashboardView = [[UIView alloc] initWithFrame:CGRectMake(40.0f, 135.0f, 268.0f, 845.0f)];
+    self.leftDashboardView.backgroundColor = [self surfaceContainerColor];
+    self.leftDashboardView.layer.cornerRadius = 20.0f;
+    self.leftDashboardView.layer.borderColor = [self colorFromHex:@"#cccccc"].CGColor;
+    self.leftDashboardView.layer.borderWidth = 1.0f;
+    self.leftDashboardView.hidden = YES;
+    [self.canvasView addSubview:self.leftDashboardView];
+
+    // Left Dashboard Subviews
+    UILabel *boardTitle = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 16.0f, 236.0f, 30.0f)];
+    boardTitle.text = @"📊 重点教学监测";
+    boardTitle.font = [UIFont boldSystemFontOfSize:18.0f];
+    boardTitle.textColor = [self primaryColor];
+    [self.leftDashboardView addSubview:boardTitle];
+
+    // Top 3 Students
+    UILabel *stHeader = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 60.0f, 236.0f, 24.0f)];
+    stHeader.text = @"⚠️ 需关注学生 (错题Top 3)";
+    stHeader.font = [UIFont boldSystemFontOfSize:14.0f];
+    stHeader.textColor = [self colorFromHex:@"#ba1a1a"]; // Red warning
+    [self.leftDashboardView addSubview:stHeader];
+
+    self.topStudentsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 90.0f, 236.0f, 150.0f)];
+    self.topStudentsLabel.numberOfLines = 0;
+    self.topStudentsLabel.font = [UIFont systemFontOfSize:14.0f];
+    self.topStudentsLabel.textColor = [self onSurfaceColor];
+    self.topStudentsLabel.text = @"暂无统计数据";
+    [self.leftDashboardView addSubview:self.topStudentsLabel];
+
+    // Top 3 Difficult Words
+    UILabel *wdHeader = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 260.0f, 236.0f, 24.0f)];
+    wdHeader.text = @"📈 高频错字 (全班盲区Top 5)";
+    wdHeader.font = [UIFont boldSystemFontOfSize:14.0f];
+    wdHeader.textColor = [self secondaryContainerColor];
+    [self.leftDashboardView addSubview:wdHeader];
+
+    self.topWordsLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 290.0f, 236.0f, 300.0f)];
+    self.topWordsLabel.numberOfLines = 0;
+    self.topWordsLabel.font = [UIFont systemFontOfSize:14.0f];
+    self.topWordsLabel.textColor = [self onSurfaceColor];
+    self.topWordsLabel.text = @"暂无统计数据";
+    [self.leftDashboardView addSubview:self.topWordsLabel];
+
+    // Table view (Default frame, will be adjusted in loadTabData)
     self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(40.0f, 140.0f, 688.0f, 840.0f)];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
@@ -124,8 +184,22 @@
     [self.spinner startAnimating];
     self.pendingRequests = nil;
     self.progressRecords = nil;
+    self.filteredRecords = nil;
     self.profilesMap = nil;
+    self.searchQuery = nil;
+    self.searchBar.text = @"";
     [self.tableView reloadData];
+
+    // Layout layout adjustments for different tabs
+    if (self.currentTab == 1) {
+        self.tableView.frame = CGRectMake(328.0f, 190.0f, 400.0f, 790.0f);
+        self.leftDashboardView.hidden = NO;
+        self.searchBar.hidden = NO;
+    } else {
+        self.tableView.frame = CGRectMake(40.0f, 140.0f, 688.0f, 840.0f);
+        self.leftDashboardView.hidden = YES;
+        self.searchBar.hidden = YES;
+    }
 
     // Teachers can only access progress tab
     if (!self.isAdmin) {
@@ -272,9 +346,111 @@
                 }
                 self.profilesMap = map;
             }
-            [self.tableView reloadData];
+            [self updateStatisticsAndFilter];
         });
     }];
+}
+
+- (void)updateStatisticsAndFilter {
+    // 1. Calculate Statistics
+    NSMutableDictionary *studentErrCounts = [NSMutableDictionary dictionary];
+    NSCountedSet *wordErrCounts = [[NSCountedSet alloc] init];
+
+    for (NSDictionary *rec in self.progressRecords) {
+        NSString *userId = rec[@"user_id"];
+        NSString *feature = rec[@"feature"];
+        
+        // Skip system metrics for error statistics
+        if ([feature isEqualToString:@"system"]) {
+            continue;
+        }
+
+        NSArray *telemetry = rec[@"telemetry_data"];
+        if ([telemetry isKindOfClass:[NSArray class]] && telemetry.count > 0) {
+            NSInteger currentCount = [studentErrCounts[userId] integerValue];
+            studentErrCounts[userId] = @(currentCount + telemetry.count);
+
+            for (NSDictionary *event in telemetry) {
+                NSString *word = event[@"target_word"];
+                if (word && word.length > 0) {
+                    [wordErrCounts addObject:word];
+                }
+            }
+        }
+    }
+
+    // Sort Top 3 Students
+    NSArray *sortedUsers = [studentErrCounts.allKeys sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+        NSNumber *val1 = studentErrCounts[obj1];
+        NSNumber *val2 = studentErrCounts[obj2];
+        return [val2 compare:val1]; // Descending
+    }];
+
+    NSMutableString *studentsText = [NSMutableString string];
+    NSInteger stLimit = MIN(3, sortedUsers.count);
+    if (stLimit == 0) {
+        [studentsText appendString:@"暂无错题学生"];
+    } else {
+        for (NSInteger i = 0; i < stLimit; i++) {
+            NSString *uid = sortedUsers[i];
+            NSDictionary *profile = self.profilesMap[uid];
+            NSString *name = profile[@"display_name"] ?: profile[@"username"] ?: @"未知学生";
+            [studentsText appendFormat:@"%ld. %@ (%@次错题)\n", (long)(i + 1), name, studentErrCounts[uid]];
+        }
+    }
+    self.topStudentsLabel.text = studentsText;
+
+    // Sort Top 5 Words
+    NSArray *sortedWords = [[wordErrCounts allObjects] sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+        NSUInteger count1 = [wordErrCounts countForObject:obj1];
+        NSUInteger count2 = [wordErrCounts countForObject:obj2];
+        return [@(count2) compare:@(count1)]; // Descending
+    }];
+
+    NSMutableString *wordsText = [NSMutableString string];
+    NSInteger wdLimit = MIN(5, sortedWords.count);
+    if (wdLimit == 0) {
+        [wordsText appendString:@"暂无高频错字数据"];
+    } else {
+        for (NSInteger i = 0; i < wdLimit; i++) {
+            NSString *word = sortedWords[i];
+            NSUInteger count = [wordErrCounts countForObject:word];
+            [wordsText appendFormat:@"%ld. 【%@】 错误: %lu次\n", (long)(i + 1), word, (unsigned long)count];
+        }
+    }
+    self.topWordsLabel.text = wordsText;
+
+    // 2. Perform Search Filtering
+    if (self.searchQuery && self.searchQuery.length > 0) {
+        NSMutableArray *filtered = [NSMutableArray array];
+        NSString *query = [self.searchQuery lowercaseString];
+        for (NSDictionary *rec in self.progressRecords) {
+            NSString *userId = rec[@"user_id"];
+            NSDictionary *profile = self.profilesMap[userId];
+            NSString *displayName = [[profile[@"display_name"] ?: @"" lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            NSString *username = [[profile[@"username"] ?: @"" lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            
+            if ([displayName containsString:query] || [username containsString:query]) {
+                [filtered addObject:rec];
+            }
+        }
+        self.filteredRecords = filtered;
+    } else {
+        self.filteredRecords = self.progressRecords;
+    }
+
+    [self.tableView reloadData];
+}
+
+#pragma mark - UISearchBarDelegate
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    self.searchQuery = [searchText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    [self updateStatisticsAndFilter];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    [searchBar resignFirstResponder];
 }
 
 #pragma mark - Approve / Reject
@@ -339,7 +515,7 @@
     if (self.currentTab == 0) {
         return self.pendingRequests.count;
     } else if (self.currentTab == 1) {
-        return self.progressRecords.count;
+        return self.filteredRecords.count;
     }
     return 0;
 }
@@ -402,7 +578,7 @@
         [rejectBtn addTarget:self action:@selector(cellRejectTapped:) forControlEvents:UIControlEventTouchUpInside];
         [cell.contentView addSubview:rejectBtn];
     } else if (self.currentTab == 1) {
-        NSDictionary *rec = self.progressRecords[ip.row];
+        NSDictionary *rec = self.filteredRecords[ip.row];
         NSString *userId = rec[@"user_id"];
         NSDictionary *profile = self.profilesMap[userId];
 
@@ -505,7 +681,7 @@
     [tv deselectRowAtIndexPath:ip animated:YES];
     if (self.currentTab != 1) return;
 
-    NSDictionary *rec = self.progressRecords[ip.row];
+    NSDictionary *rec = self.filteredRecords[ip.row];
     NSArray *telemetry = rec[@"telemetry_data"];
     if (![telemetry isKindOfClass:[NSArray class]] || telemetry.count == 0) {
         [self showAlert:@"无相关记录" message:@"该学生目前没有相关的记录！"];
