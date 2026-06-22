@@ -3,6 +3,7 @@
 #import "MainScreenViewController.h"
 #import "PinyinMainViewController.h"
 #import "AdminViewController.h"
+#import "LoginViewController.h"
 #import "SupabaseClient.h"
 #import "SquishyButton.h"
 
@@ -117,9 +118,28 @@
     verLabel.textAlignment = NSTextAlignmentCenter;
     [self.canvasView addSubview:verLabel];
 
-    // 5. Admin button (only visible when role == admin)
+    // 5. Debug label — shows cached role (remove after confirming admin works)
+    NSString *debugRole = [[SupabaseClient sharedClient] getCachedRole];
+    UILabel *debugLabel = [[UILabel alloc] initWithFrame:CGRectMake(28.0f, 900.0f, 400.0f, 24.0f)];
+    debugLabel.text = [NSString stringWithFormat:@"Debug role: %@", debugRole ?: @"nil"];
+    debugLabel.font = [UIFont systemFontOfSize:12.0f];
+    debugLabel.textColor = [UIColor grayColor];
+    [self.canvasView addSubview:debugLabel];
+
+    // 6. Logout button (top-left, all users)
+    SquishyButton *logoutBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(28.0f, 30.0f, 72.0f, 40.0f)
+                                                    backgroundColor:[self onSurfaceVariantColor]
+                                                        shadowColor:[self colorFromHex:@"#2a3531"]
+                                                       cornerRadius:12.0f];
+    [logoutBtn setTitle:@"退出" forState:UIControlStateNormal];
+    [logoutBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    logoutBtn.titleLabel.font = [UIFont boldSystemFontOfSize:14.0f];
+    [logoutBtn addTarget:self action:@selector(logoutTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.canvasView addSubview:logoutBtn];
+
+    // 6. Admin button (top-right, only visible when role == admin or teacher)
     NSString *role = [[SupabaseClient sharedClient] getCachedRole];
-    if ([role isEqualToString:@"admin"]) {
+    if ([role isEqualToString:@"admin"] || [role isEqualToString:@"teacher"]) {
         SquishyButton *adminBtn = [[SquishyButton alloc] initWithFrame:CGRectMake(640.0f, 30.0f, 100.0f, 40.0f)
                                                        backgroundColor:[self secondaryContainerColor]
                                                            shadowColor:[self colorFromHex:@"#d47d1a"]
@@ -130,6 +150,16 @@
         [adminBtn addTarget:self action:@selector(adminTapped) forControlEvents:UIControlEventTouchUpInside];
         [self.canvasView addSubview:adminBtn];
     }
+}
+
+- (void)logoutTapped {
+    [[SupabaseClient sharedClient] clearToken];
+    [[SupabaseClient sharedClient] saveRole:@""];
+    LoginViewController *loginVC = [[LoginViewController alloc] init];
+    AppNavigationController *nav = [[AppNavigationController alloc] initWithRootViewController:loginVC];
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    window.rootViewController = nav;
+    [window makeKeyAndVisible];
 }
 
 - (void)shiziTapped {

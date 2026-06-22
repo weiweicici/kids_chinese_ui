@@ -11,10 +11,13 @@
 // Base URL for Supabase REST API, e.g. "https://xxxxx.supabase.co"
 - (void)updateBaseURL:(NSString *)baseURL anonKey:(NSString *)anonKey;
 
-// Token management (Keychain, kSecAttrAccessibleAfterFirstUnlock)
+// Token management
 - (void)saveToken:(NSString *)jwt;
 - (NSString *)getToken;
 - (void)clearToken;
+// Override the auth token for the next REST call only.
+// Used by LoginVC to pass signIn token directly without storage.
+- (void)useTemporaryToken:(NSString *)jwt;
 
 // Role cache (Keychain, alongside token)
 - (void)saveRole:(NSString *)role;
@@ -34,6 +37,9 @@
 // Auth methods — use anon key for Authorization, not Bearer token.
 // Response includes access_token to be stored via saveToken:.
 - (void)signUpWithEmail:(NSString *)email password:(NSString *)password
+             completion:(void (^)(NSDictionary *response, NSError *error))completion;
+- (void)signUpWithEmail:(NSString *)email password:(NSString *)password
+               username:(NSString *)username
              completion:(void (^)(NSDictionary *response, NSError *error))completion;
 - (void)signInWithEmail:(NSString *)email password:(NSString *)password
              completion:(void (^)(NSDictionary *response, NSError *error))completion;

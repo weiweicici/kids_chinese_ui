@@ -10,6 +10,7 @@
 @property (strong, nonatomic) UITableView *tableView;
 @property (strong, nonatomic) UIActivityIndicatorView *spinner;
 @property (strong, nonatomic) UILabel *emptyLabel;
+@property (assign, nonatomic) BOOL isAdmin;
 
 // 审批 tab data
 @property (strong, nonatomic) NSArray *pendingRequests;
@@ -27,7 +28,9 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.currentTab = 0;
+    NSString *role = [[SupabaseClient sharedClient] getCachedRole];
+    self.isAdmin = [role isEqualToString:@"admin"];
+    self.currentTab = self.isAdmin ? 0 : 1;
     [self buildUI];
     [self loadTabData];
 }
@@ -71,9 +74,13 @@
     [topBar addSubview:refreshBtn];
 
     // Segmented control
-    self.segControl = [[UISegmentedControl alloc] initWithItems:@[@"审批", @"进度", @"课程"]];
+    if (self.isAdmin) {
+        self.segControl = [[UISegmentedControl alloc] initWithItems:@[@"审批", @"进度", @"课程"]];
+    } else {
+        self.segControl = [[UISegmentedControl alloc] initWithItems:@[@"进度"]];
+    }
     self.segControl.frame = CGRectMake(184.0f, 80.0f, 400.0f, 40.0f);
-    self.segControl.selectedSegmentIndex = 0;
+    self.segControl.selectedSegmentIndex = self.isAdmin ? self.currentTab : 0;
     self.segControl.tintColor = [self primaryColor];
     [self.segControl addTarget:self action:@selector(tabChanged:) forControlEvents:UIControlEventValueChanged];
     [self.canvasView addSubview:self.segControl];
@@ -119,6 +126,12 @@
     self.progressRecords = nil;
     self.profilesMap = nil;
     [self.tableView reloadData];
+
+    // Teachers can only access progress tab
+    if (!self.isAdmin) {
+        [self loadStudentProgress];
+        return;
+    }
 
     if (self.currentTab == 0) {
         [self loadPendingApprovals];

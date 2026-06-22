@@ -45,7 +45,7 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
     [self mountHome];
 
     // Background verify — if token expired, kick to login on next launch
-    [[SupabaseClient sharedClient] GET:@"/rest/v1/profiles?id=eq.authenticated&select=id,role,is_approved"
+    [[SupabaseClient sharedClient] GET:@"/rest/v1/profiles?select=id,role,is_approved"
                             completion:^(NSDictionary *resp, NSError *err) {
         if (err) {
             // Token likely expired — clear it; login page on next app start

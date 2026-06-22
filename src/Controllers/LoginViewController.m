@@ -197,66 +197,28 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
         return;
     }
 
-    [[SupabaseClient sharedClient] signUpWithEmail:email password:password completion:^(NSDictionary *response, NSError *error) {
+    // Pass username as user_metadata — Supabase trigger handle_new_user()
+    // reads raw_user_meta_data->>'username' to auto-create profile + registration_requests
+    [[SupabaseClient sharedClient] signUpWithEmail:email password:password username:username completion:^(NSDictionary *response, NSError *error) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (error) {
                 [self showStatus:[NSString stringWithFormat:@"注册失败: %@",
                                   error.localizedDescription ?: @"未知错误"] isError:YES];
                 return;
             }
-            
-            // Save the returned access token temporarily so subsequent profile and registration request
-            // creation requests are fully authenticated under the user's RLS policies
+
             NSString *accessToken = response[@"access_token"];
-            if (accessToken) {
-                [[SupabaseClient sharedClient] saveToken:accessToken];
-            }
-            
-            // Signup succeeded — create profile + registration request
-            NSString *userId = response[@"id"] ?: response[@"user"][@"id"];
-            if (!userId) {
-                [self showStatus:@"注册失败: 无法获取用户信息" isError:YES];
+            if (!accessToken) {
+                // No access_token = email confirmation required
+                [self showStatus:@"注册失败: Supabase 需关闭邮箱验证，请联系管理员在 Authentication → Providers → Email 中关闭 Confirm sign up" isError:YES];
                 return;
             }
-            [self createProfileWithUserId:userId username:username email:email];
-        });
-    }];
-}
 
-- (void)createProfileWithUserId:(NSString *)userId username:(NSString *)username email:(NSString *)email {
-    NSDictionary *profileBody = @{
-        @"id": userId,
-        @"username": username,
-        @"display_name": username,
-        @"role": @"student",
-        @"is_approved": @NO
-    };
-    [[SupabaseClient sharedClient] POST:@"/rest/v1/profiles" body:profileBody completion:^(NSDictionary *resp, NSError *err) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (err) {
-                [self showStatus:[NSString stringWithFormat:@"创建用户资料失败: %@",
-                                  err.localizedDescription] isError:YES];
-                return;
-            }
-            [self createRegistrationRequestWithUserId:userId];
-        });
-    }];
-}
+            // Save token so the user can log in (after teacher approves)
+            [[SupabaseClient sharedClient] saveToken:accessToken];
 
-- (void)createRegistrationRequestWithUserId:(NSString *)userId {
-    NSDictionary *reqBody = @{
-        @"user_id": userId,
-        @"status": @"pending"
-    };
-    [[SupabaseClient sharedClient] POST:@"/rest/v1/registration_requests" body:reqBody completion:^(NSDictionary *resp, NSError *err) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Clear temporary token so student cannot bypass approval status
-            [[SupabaseClient sharedClient] clearToken];
-            
-            if (err) {
-                [self showStatus:@"注册成功，但提交审批失败，请联系老师" isError:NO];
-                return;
-            }
+            // Profile + registration_requests created automatically by database trigger.
+            // No REST API calls needed.
             [self showStatus:@"注册成功！请等待老师审批后登录" isError:NO];
         });
     }];
@@ -278,45 +240,56 @@ static NSString *const kSupabaseAnonKey = @"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
                 return;
             }
             [[SupabaseClient sharedClient] saveToken:accessToken];
-            [self fetchProfileAndProceed];
+            [self fetchProfileAndProceedWithToken:accessToken];
         });
     }];
 }
 
-- (void)fetchProfileAndProceed {
-    NSString *path = @"/rest/v1/profiles?id=eq.authenticated&select=*";
+- (void)fetchProfileAndProceedWithToken:(NSString *)token {
+    [[SupabaseClient sharedClient] useTemporaryToken:token];
+    NSString *path = @"/rest/v1/profiles?select=*";
+    NSLog(@"LoginVC: fetching profile with token prefix: %@...", [token substringToIndex:MIN(20, token.length)]);
     [[SupabaseClient sharedClient] GET:path completion:^(NSDictionary *resp, NSError *err) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (err) {
                 // Can't verify profile — proceed anyway to HomeScreen
+                NSLog(@"LoginVC: profile GET error — %@", err.localizedDescription);
                 [self proceedToHome];
                 return;
             }
             NSArray *profiles = resp[@"data"];
+            NSLog(@"LoginVC: profiles count = %ld, response = %@", (long)profiles.count, resp);
             if (![profiles isKindOfClass:[NSArray class]] || profiles.count == 0) {
-                [self proceedToHome];
+                // No profile found — registration incomplete or not yet created
+                // (trigger may not be set up, or user hasn't been approved yet)
+                [self showPendingApprovalAlert];
                 return;
             }
             NSDictionary *profile = profiles.firstObject;
             NSString *role = profile[@"role"];
             NSNumber *approved = profile[@"is_approved"];
+            NSLog(@"LoginVC: profile role=%@ approved=%@", role, approved);
             if (role) {
                 [[SupabaseClient sharedClient] saveRole:role];
+                NSLog(@"LoginVC: saved role '%@' to keychain", role);
             }
             if (![approved boolValue]) {
-                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"账号待审批"
-                    message:@"您的账号尚未通过老师审批，请稍后再试" preferredStyle:UIAlertControllerStyleAlert];
-                [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-                    [[SupabaseClient sharedClient] clearToken];
-                }]];
-                [self presentViewController:alert animated:YES completion:nil];
-                [self.spinner stopAnimating];
-                self.submitBtn.enabled = YES;
+                [self showPendingApprovalAlert];
                 return;
             }
             [self proceedToHome];
         });
     }];
+}
+
+- (void)showPendingApprovalAlert {
+    [self.spinner stopAnimating];
+    self.submitBtn.enabled = YES;
+    [[SupabaseClient sharedClient] clearToken];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"账号待审批"
+        message:@"您的账号尚未通过老师审批，请稍后再试" preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)proceedToHome {

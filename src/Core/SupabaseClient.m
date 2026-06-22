@@ -13,7 +13,8 @@ static NSTimeInterval const kRequestTimeout = 15.0;
 @property (strong, nonatomic) NSURLSession *session;
 @property (strong, nonatomic) NSOperationQueue *callbackQueue;
 @property (assign, nonatomic) BOOL available;
-@property (strong, nonatomic) NSMutableDictionary *downloadTasks; // taskID -> {block, destPath}
+@property (strong, nonatomic) NSMutableDictionary *downloadTasks;
+@property (strong, nonatomic) NSString *tempToken; // overrides getToken for one REST call
 
 @end
 
@@ -133,24 +134,33 @@ static NSTimeInterval const kRequestTimeout = 15.0;
 }
 
 - (void)saveToken:(NSString *)jwt {
-    [self saveKeychainValue:jwt forAccount:kTokenAccount];
+    if (!jwt) return;
+    [[NSUserDefaults standardUserDefaults] setObject:jwt forKey:kTokenAccount];
+    [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 - (NSString *)getToken {
-    return [self keychainValueForAccount:kTokenAccount];
+    return [[NSUserDefaults standardUserDefaults] stringForKey:kTokenAccount];
+}
+
+- (void)useTemporaryToken:(NSString *)jwt {
+    self.tempToken = jwt;
 }
 
 - (void)clearToken {
-    [self deleteKeychainValueForAccount:kTokenAccount];
-    [self deleteKeychainValueForAccount:kRoleAccount];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:kTokenAccount];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"cached_role"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    self.tempToken = nil;
 }
 
 - (void)saveRole:(NSString *)role {
-    [self saveKeychainValue:role forAccount:kRoleAccount];
+    [[NSUserDefaults standardUserDefaults] setObject:role forKey:@"cached_role"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 - (NSString *)getCachedRole {
-    return [self keychainValueForAccount:kRoleAccount];
+    return [[NSUserDefaults standardUserDefaults] stringForKey:@"cached_role"];
 }
 
 #pragma mark - Request Builder
@@ -162,7 +172,8 @@ static NSTimeInterval const kRequestTimeout = 15.0;
     [req setValue:@"application/json" forHTTPHeaderField:@"Accept"];
 
     // Auth header
-    NSString *token = [self getToken];
+    NSString *token = self.tempToken ?: [self getToken];
+    self.tempToken = nil; // one-shot
     if (token) {
         [req setValue:[NSString stringWithFormat:@"Bearer %@", token]
    forHTTPHeaderField:@"Authorization"];
@@ -321,8 +332,15 @@ static NSTimeInterval const kRequestTimeout = 15.0;
         }
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
         if (httpResponse.statusCode >= 400) {
-            NSString *errMsg = [NSString stringWithFormat:@"Auth failed: %ld",
-                                (long)httpResponse.statusCode];
+            NSString *bodyMsg = @"";
+            if (data.length > 0) {
+                id bodyJSON = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                if ([bodyJSON isKindOfClass:[NSDictionary class]]) {
+                    bodyMsg = bodyJSON[@"msg"] ?: bodyJSON[@"message"] ?: bodyJSON[@"error"] ?: @"";
+                }
+            }
+            NSString *errMsg = [NSString stringWithFormat:@"Auth failed (%ld): %@",
+                                (long)httpResponse.statusCode, bodyMsg];
             NSError *authErr = [NSError errorWithDomain:@"SupabaseAuth" code:httpResponse.statusCode
                                               userInfo:@{NSLocalizedDescriptionKey: errMsg}];
             if (completion) completion(nil, authErr);
@@ -347,6 +365,15 @@ static NSTimeInterval const kRequestTimeout = 15.0;
 - (void)signUpWithEmail:(NSString *)email password:(NSString *)password
              completion:(void (^)(NSDictionary *, NSError *))completion {
     NSDictionary *body = @{@"email": email ?: @"", @"password": password ?: @""};
+    [self authRequestWithPath:@"/auth/v1/signup" body:body completion:completion];
+}
+
+- (void)signUpWithEmail:(NSString *)email password:(NSString *)password
+               username:(NSString *)username
+             completion:(void (^)(NSDictionary *, NSError *))completion {
+    NSDictionary *data = username ? @{@"username": username} : @{};
+    NSDictionary *body = @{@"email": email ?: @"", @"password": password ?: @"",
+                           @"data": data};
     [self authRequestWithPath:@"/auth/v1/signup" body:body completion:completion];
 }
 
